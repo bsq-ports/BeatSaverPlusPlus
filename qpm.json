@@ -1,0 +1,53 @@
+{
+  "version": "0.3.0",
+  "sharedDir": "shared",
+  "dependenciesDir": "extern",
+  "info": {
+    "name": "BeatSaverPlusPlus",
+    "id": "beatsaverplusplus",
+    "version": "0.1.0",
+    "url": "https://github.com/RedBrumbler/BeatSaverPlusPlus",
+    "additionalData": {
+      "overrideSoName": "libbeatsaverplusplus.so",
+      "cmake": false
+    }
+  },
+  "workspace": {
+    "scripts": {
+      "qmod": [
+        "pwsh ./scripts/build.ps1",
+        "qpm qmod build",
+        "pwsh ./scripts/createqmod.ps1 BeatSaverPlusPlus"
+      ]
+    }
+  },
+  "dependencies": [
+    {
+      "id": "paper",
+      "versionRange": "^3.6.1",
+      "additionalData": {}
+    },
+    {
+      "id": "zip",
+      "versionRange": "^1.7.4",
+      "additionalData": {
+        "private": true
+      }
+    },
+    {
+      "id": "beatsaber-hook",
+      "versionRange": "*",
+      "additionalData": {}
+    },
+    {
+      "id": "web-utils",
+      "versionRange": "^0.3.0",
+      "additionalData": {}
+    },
+    {
+      "id": "fmt",
+      "versionRange": "^10.0.0",
+      "additionalData": {}
+    }
+  ]
+}
