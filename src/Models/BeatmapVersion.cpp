@@ -4,15 +4,15 @@
 
 namespace BeatSaver::Models {
     std::optional<std::filesystem::path> BeatmapVersion::DownloadBeatmap(Beatmap const& beatmap) const {
-        return BeatSaver::API::Download::DownloadBeatmap(beatmap, *this);
+        return BeatSaver::API::Download::DownloadBeatmap({beatmap, *this});
     }
 
     std::future<std::optional<std::filesystem::path>> BeatmapVersion::DownloadBeatmapAsync(Beatmap const& beatmap) const {
-        return BeatSaver::API::Download::DownloadBeatmapAsync(beatmap, *this);
+        return BeatSaver::API::Download::DownloadBeatmapAsync({beatmap, *this});
     }
 
     void BeatmapVersion::DownloadBeatmapAsync(Beatmap const& beatmap, std::function<void(std::optional<std::filesystem::path>)> onFinished) const {
-        return BeatSaver::API::Download::DownloadBeatmapAsync(beatmap, *this, onFinished);
+        return BeatSaver::API::Download::DownloadBeatmapAsync({beatmap, *this}, onFinished);
     }
 
     std::optional<std::vector<uint8_t>> BeatmapVersion::GetCoverImage() const {
