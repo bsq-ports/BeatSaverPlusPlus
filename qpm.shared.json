@@ -14,7 +14,13 @@
       }
     },
     "workspace": {
-      "scripts": {}
+      "scripts": {
+        "qmod": [
+          "pwsh ./scripts/build.ps1",
+          "qpm qmod build",
+          "pwsh ./scripts/createqmod.ps1 BeatSaverPlusPlus"
+        ]
+      }
     },
     "dependencies": [
       {
@@ -50,17 +56,17 @@
     {
       "dependency": {
         "id": "web-utils",
-        "versionRange": "=0.3.3",
+        "versionRange": "=0.3.5",
         "additionalData": {
-          "soLink": "https://github.com/RedBrumbler/WebUtils/releases/download/v0.3.3/libweb-utils.so",
-          "debugSoLink": "https://github.com/RedBrumbler/WebUtils/releases/download/v0.3.3/debug_libweb-utils.so",
+          "soLink": "https://github.com/RedBrumbler/WebUtils/releases/download/v0.3.5/libweb-utils.so",
+          "debugSoLink": "https://github.com/RedBrumbler/WebUtils/releases/download/v0.3.5/debug_libweb-utils.so",
           "overrideSoName": "libweb-utils.so",
-          "modLink": "https://github.com/RedBrumbler/WebUtils/releases/download/v0.3.3/WebUtils.qmod",
-          "branchName": "version/v0_3_3",
+          "modLink": "https://github.com/RedBrumbler/WebUtils/releases/download/v0.3.5/WebUtils.qmod",
+          "branchName": "version/v0_3_5",
           "cmake": false
         }
       },
-      "version": "0.3.3"
+      "version": "0.3.5"
     },
     {
       "dependency": {
