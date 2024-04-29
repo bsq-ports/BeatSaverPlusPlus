@@ -8,7 +8,7 @@ namespace BeatSaver::Models {
     }
 
     std::future<std::optional<std::filesystem::path>> BeatmapVersion::DownloadBeatmapAsync(Beatmap const& beatmap) const {
-        return BeatSaver::API::Download::DownloadBeatmapAsync({beatmap, *this});
+        return std::async(std::launch::any, BeatSaver::API::Download::DownloadBeatmap, BeatSaver::API::Download::BeatmapDownloadInfo{beatmap, *this});
     }
 
     void BeatmapVersion::DownloadBeatmapAsync(Beatmap const& beatmap, std::function<void(std::optional<std::filesystem::path>)> onFinished) const {
