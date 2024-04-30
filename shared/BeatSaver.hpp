@@ -36,13 +36,13 @@ namespace BeatSaver::API {
     /// @param url the url to download the file from
     /// @param outputPath the output directory, should not be CustomLevels, but the output path
     /// @return bool future success, if download failed or extraction of the file failed, false will return.
-    std::future<bool> BEATSAVER_PLUSPLUS_EXPORT DownloadSongZipAsync(std::string url, std::filesystem::path outputPath);
+    std::future<bool> BEATSAVER_PLUSPLUS_EXPORT DownloadSongZipAsync(std::string url, std::filesystem::path outputPath, std::function<void(float)> progressReport = nullptr);
 
     /// @brief downloads a song zip from the url to a given path
     /// @param url the url to download the file from
     /// @param outputPath the output directory, should not be CustomLevels, but the output path
     /// @return bool success, if download failed or extraction of the file failed, false will return.
-    bool BEATSAVER_PLUSPLUS_EXPORT DownloadSongZip(std::string url, std::filesystem::path outputPath);
+    bool BEATSAVER_PLUSPLUS_EXPORT DownloadSongZip(std::string url, std::filesystem::path outputPath, std::function<void(float)> progressReport = nullptr);
 
     DECLARE_SIMPLE_RESPONSE_T(Models, Page);
     DECLARE_SIMPLE_RESPONSE_T(Models, Beatmap);
@@ -244,14 +244,14 @@ namespace BeatSaver::API {
         };
 
         /// @brief download a beatmap from the provided beatmapversion
-        BEATSAVER_PLUSPLUS_EXPORT void DownloadBeatmapAsync(BeatmapDownloadInfo info, finished_opt_function<std::filesystem::path> onFinished);
+        BEATSAVER_PLUSPLUS_EXPORT void DownloadBeatmapAsync(BeatmapDownloadInfo info, finished_opt_function<std::filesystem::path> onFinished, std::function<void(float)> progressReport = nullptr);
 
         /// @brief download multiple beatmaps asynchronously, ratelimited to ~4 async requests.
         /// @return map of the downloaded beatmaps' keys, if a download failed its corresponding path wont be set
-        BEATSAVER_PLUSPLUS_EXPORT std::future<std::unordered_map<std::string, std::optional<std::filesystem::path>>> DownloadBeatmapsAsync(std::span<BeatmapDownloadInfo const> infos);
+        BEATSAVER_PLUSPLUS_EXPORT std::future<std::unordered_map<std::string, std::optional<std::filesystem::path>>> DownloadBeatmapsAsync(std::span<BeatmapDownloadInfo const> infos, std::function<void(int, int)> progressReport = nullptr);
 
         /// @brief download multiple beatmaps asynchronously, ratelimited to ~4 async requests.
-        BEATSAVER_PLUSPLUS_EXPORT void DownloadBeatmapsAsync(std::span<BeatmapDownloadInfo const> infos, finished_opt_function<std::unordered_map<std::string, std::optional<std::filesystem::path>>> onFinished);
+        BEATSAVER_PLUSPLUS_EXPORT void DownloadBeatmapsAsync(std::span<BeatmapDownloadInfo const> infos, finished_opt_function<std::unordered_map<std::string, std::optional<std::filesystem::path>>> onFinished, std::function<void(int, int)> progressReport = nullptr);
 
         /// @brief get the preview sound from the provided beatmapversion
         BEATSAVER_PLUSPLUS_EXPORT void GetPreviewAsync(Models::BeatmapVersion const& beatmap, finished_opt_function<std::vector<uint8_t>> onFinished);
@@ -261,11 +261,11 @@ namespace BeatSaver::API {
 
         /// @brief download a beatmap from the provided download info
         /// @return output path where it was written to
-        BEATSAVER_PLUSPLUS_EXPORT std::optional<std::filesystem::path> DownloadBeatmap(BeatmapDownloadInfo downloadInfo);
+        BEATSAVER_PLUSPLUS_EXPORT std::optional<std::filesystem::path> DownloadBeatmap(BeatmapDownloadInfo downloadInfo, std::function<void(float)> progressReport = nullptr);
 
         /// @brief download multiple beatmaps, ratelimited to ~4 async requests.
         /// @return readonly span of the infos to use to download these maps
-        BEATSAVER_PLUSPLUS_EXPORT std::unordered_map<std::string, std::optional<std::filesystem::path>> DownloadBeatmaps(std::span<BeatmapDownloadInfo const> infos);
+        BEATSAVER_PLUSPLUS_EXPORT std::unordered_map<std::string, std::optional<std::filesystem::path>> DownloadBeatmaps(std::span<BeatmapDownloadInfo const> infos, std::function<void(int, int)> progressReport = nullptr);
 
         /// @brief get the preview sound from the provided beatmapversion
         BEATSAVER_PLUSPLUS_EXPORT std::optional<std::vector<uint8_t>> GetPreview(Models::BeatmapVersion const& beatmap);

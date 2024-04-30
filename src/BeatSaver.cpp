@@ -21,12 +21,12 @@ namespace BeatSaver::API {
         return _defaultOutputRoothPath;
     }
 
-    std::future<bool> DownloadSongZipAsync(std::string url, std::filesystem::path outputPath) {
-        return std::async(std::launch::any, &DownloadSongZip, std::forward<std::string>(url), std::forward<std::filesystem::path>(outputPath));
+    std::future<bool> DownloadSongZipAsync(std::string url, std::filesystem::path outputPath, std::function<void(float)> progressReport) {
+        return std::async(std::launch::any, &DownloadSongZip, std::forward<std::string>(url), std::forward<std::filesystem::path>(outputPath), std::forward<std::function<void(float)>>(progressReport));
     }
 
-    bool DownloadSongZip(std::string url, std::filesystem::path outputPath) {
-        auto data = downloader.Get<WebUtils::DataResponse>({url});
+    bool DownloadSongZip(std::string url, std::filesystem::path outputPath, std::function<void(float)> progressReport) {
+        auto data = downloader.Get<WebUtils::DataResponse>({url}, progressReport);
         if (!data.IsSuccessful() || !data.DataParsedSuccessful()) return false;
         auto& zipData = data.responseData.value();
 
@@ -486,31 +486,31 @@ namespace BeatSaver::API {
     namespace Download {
         BeatmapDownloadInfo::BeatmapDownloadInfo(Models::Beatmap const& beatmap, Models::BeatmapVersion const& version) : Key(version.Key.value_or(beatmap.Id)), DownloadURL(version.DownloadURL), FolderName(fmt::format("{} ({} - {})", version.Key.value_or(beatmap.Id), beatmap.Metadata.SongName, beatmap.Metadata.LevelAuthorName)) {};
 
-        std::future<std::optional<std::filesystem::path>> DownloadBeatmapAsync(BeatmapDownloadInfo downloadInfo) {
-            return std::async(std::launch::any, &DownloadBeatmap, downloadInfo);
+        std::future<std::optional<std::filesystem::path>> DownloadBeatmapAsync(BeatmapDownloadInfo downloadInfo, std::function<void(float)> progressReport) {
+            return std::async(std::launch::any, &DownloadBeatmap, downloadInfo, progressReport);
         }
 
-        void DownloadBeatmapAsync(BeatmapDownloadInfo downloadInfo, finished_opt_function<std::filesystem::path> onFinished) {
+        void DownloadBeatmapAsync(BeatmapDownloadInfo downloadInfo, finished_opt_function<std::filesystem::path> onFinished, std::function<void(float)> progressReport) {
             if (!onFinished) return;
 
-            std::thread([](BeatmapDownloadInfo downloadInfo, finished_opt_function<std::filesystem::path> onFinished){
-                onFinished(DownloadBeatmap(downloadInfo));
-            }, std::forward<BeatmapDownloadInfo>(downloadInfo), std::forward<finished_opt_function<std::filesystem::path>>(onFinished)).detach();
+            std::thread([](BeatmapDownloadInfo downloadInfo, finished_opt_function<std::filesystem::path> onFinished, std::function<void(float)> progressReport){
+                onFinished(DownloadBeatmap(downloadInfo, progressReport));
+            }, std::forward<BeatmapDownloadInfo>(downloadInfo), std::forward<finished_opt_function<std::filesystem::path>>(onFinished), std::forward<std::function<void(float)>>(progressReport)).detach();
         }
 
-        std::future<std::unordered_map<std::string, std::optional<std::filesystem::path>>> DownloadBeatmapsAsync(std::span<BeatmapDownloadInfo const> infos) {
-            static auto redirect = [](std::vector<BeatmapDownloadInfo> infos) {
-                return DownloadBeatmaps(infos);
+        std::future<std::unordered_map<std::string, std::optional<std::filesystem::path>>> DownloadBeatmapsAsync(std::span<BeatmapDownloadInfo const> infos, std::function<void(int, int)> progressReport) {
+            static auto redirect = [](std::vector<BeatmapDownloadInfo> infos, std::function<void(int, int)> progressReport) {
+                return DownloadBeatmaps(infos, progressReport);
             };
-            return std::async(std::launch::any, redirect, std::vector(infos.begin(), infos.end()));
+            return std::async(std::launch::any, redirect, std::vector(infos.begin(), infos.end()), std::forward<std::function<void(int, int)>>(progressReport));
         }
 
-        void DownloadBeatmapsAsync(std::span<BeatmapDownloadInfo const> infos, finished_opt_function<std::unordered_map<std::string, std::optional<std::filesystem::path>>> onFinished) {
+        void DownloadBeatmapsAsync(std::span<BeatmapDownloadInfo const> infos, finished_opt_function<std::unordered_map<std::string, std::optional<std::filesystem::path>>> onFinished, std::function<void(int, int)> progressReport) {
             if (!onFinished) return;
 
-            std::thread([](std::vector<BeatmapDownloadInfo> downloadInfos, finished_opt_function<std::unordered_map<std::string, std::optional<std::filesystem::path>>> onFinished){
-                onFinished(DownloadBeatmaps(downloadInfos));
-            }, std::vector(infos.begin(), infos.end()), std::forward<finished_opt_function<std::unordered_map<std::string, std::optional<std::filesystem::path>>>>(onFinished)).detach();
+            std::thread([](std::vector<BeatmapDownloadInfo> downloadInfos, finished_opt_function<std::unordered_map<std::string, std::optional<std::filesystem::path>>> onFinished, std::function<void(int, int)> progressReport){
+                onFinished(DownloadBeatmaps(downloadInfos, progressReport));
+            }, std::vector(infos.begin(), infos.end()), std::forward<finished_opt_function<std::unordered_map<std::string, std::optional<std::filesystem::path>>>>(onFinished), std::forward<std::function<void(int, int)>>(progressReport)).detach();
         }
 
         void GetPreviewAsync(Models::BeatmapVersion const& beatmap, finished_opt_function<std::vector<uint8_t>> onFinished) {
@@ -529,10 +529,10 @@ namespace BeatSaver::API {
             }, std::forward<std::string>(beatmap.CoverURL), std::forward<finished_opt_function<std::vector<uint8_t>>>(onFinished)).detach();
         }
 
-        std::optional<std::filesystem::path> DownloadBeatmap(BeatmapDownloadInfo downloadInfo) {
+        std::optional<std::filesystem::path> DownloadBeatmap(BeatmapDownloadInfo downloadInfo, std::function<void(float)> progressReport) {
             auto targetPath = _defaultOutputRoothPath / Utils::ReplaceIllegalCharsInPath(downloadInfo.FolderName);
 
-            if (BeatSaver::API::DownloadSongZip(downloadInfo.DownloadURL, targetPath)) {
+            if (BeatSaver::API::DownloadSongZip(downloadInfo.DownloadURL, targetPath, progressReport)) {
                 return targetPath;
             }
 
@@ -552,29 +552,40 @@ namespace BeatSaver::API {
             virtual WebUtils::URLOptions const& get_URL() const override { return url; }
         };
 
-        std::unordered_map<std::string, std::optional<std::filesystem::path>> DownloadBeatmaps(std::span<BeatmapDownloadInfo const> infos) {
+        std::unordered_map<std::string, std::optional<std::filesystem::path>> DownloadBeatmaps(std::span<BeatmapDownloadInfo const> infos, std::function<void(int, int)> progressReport) {
+            std::mutex resultMutex;
             std::unordered_map<std::string, std::optional<std::filesystem::path>> results;
+            auto setKeyValue = [&resultMutex, &results](std::string key, std::optional<std::filesystem::path> value) {
+                std::unique_lock lock(resultMutex);
+                results[key] = value;
+            };
+
             WebUtils::RatelimitedDispatcher rl;
             rl.rateLimitTime = std::chrono::milliseconds(1000);
             rl.maxConcurrentRequests = 4;
 
             rl.downloader = downloader;
+            int total = infos.size();
+            std::atomic_int completed = 0;
 
             // request finished handler
-            rl.onRequestFinished = [&results](bool success, WebUtils::IRequest* request) -> std::optional<WebUtils::RatelimitedDispatcher::RetryOptions> {
+            rl.onRequestFinished = [total, &completed, progressReport, &setKeyValue](bool success, WebUtils::IRequest* request) -> std::optional<WebUtils::RatelimitedDispatcher::RetryOptions> {
                 if (!success) return WebUtils::RatelimitedDispatcher::RetryOptions(std::chrono::milliseconds(50));
                 auto bulkReq = dynamic_cast<BulkBeatmapDownloadRequest*>(request);
                 if (!bulkReq) return std::nullopt;
 
                 auto& response = bulkReq->response;
                 auto& info = bulkReq->info;
-                results[info.Key] = std::nullopt;
+                setKeyValue(info.Key, std::nullopt);
 
                 if (response.IsSuccessful() && response.DataParsedSuccessful()) {
                     auto outputPath = _defaultOutputRoothPath / Utils::ReplaceIllegalCharsInPath(info.FolderName);
                     if (Utils::ExtractAll(response.responseData.value(), outputPath)) {
-                        results[info.Key] = outputPath;
+                        setKeyValue(info.Key, outputPath);
                     }
+
+                    completed++;
+                    if (progressReport != nullptr) progressReport(total, completed);
                 }
                 return std::nullopt;
             };
@@ -587,6 +598,8 @@ namespace BeatSaver::API {
 
             // start and wait for all requests to finish
             rl.StartDispatchIfNeeded().wait();
+            // one last progress report after everything is completed
+            if (progressReport != nullptr) progressReport(total, completed);
             return results;
         }
 
