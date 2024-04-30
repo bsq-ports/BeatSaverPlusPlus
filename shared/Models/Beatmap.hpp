@@ -20,16 +20,16 @@ SERDE_STRUCT(BeatSaver::Models, Beatmap,
     GETTER_FIELD(std::vector<BeatmapVersion>, Versions, "versions");
 
     public:
-        std::optional<std::filesystem::path> DownloadLatestBeatmap(Beatmap const& beatmap) const {
-            return Versions.front().DownloadBeatmap(*this);
+        std::optional<std::filesystem::path> DownloadLatestBeatmap(Beatmap const& beatmap, std::function<void(float)> progressReport) const {
+            return Versions.front().DownloadBeatmap(*this, progressReport);
         }
 
-        std::future<std::optional<std::filesystem::path>> DownloadLatestBeatmapAsync(Beatmap const& beatmap) const {
-            return Versions.front().DownloadBeatmapAsync(*this);
+        std::future<std::optional<std::filesystem::path>> DownloadLatestBeatmapAsync(Beatmap const& beatmap, std::function<void(float)> progressReport) const {
+            return Versions.front().DownloadBeatmapAsync(*this, progressReport);
         }
 
-        void DownloadLatestBeatmapAsync(Beatmap const& beatmap, std::function<void(std::optional<std::filesystem::path>)> onFinished) const {
-            return Versions.front().DownloadBeatmapAsync(*this, onFinished);
+        void DownloadLatestBeatmapAsync(Beatmap const& beatmap, std::function<void(std::optional<std::filesystem::path>)> onFinished, std::function<void(float)> progressReport) const {
+            return Versions.front().DownloadBeatmapAsync(*this, onFinished, progressReport);
         }
 
         std::optional<std::vector<uint8_t>> GetLatestCoverImage() const {
