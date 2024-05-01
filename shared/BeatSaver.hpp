@@ -53,7 +53,7 @@ namespace BeatSaver::API {
     BEATSAVER_PLUSPLUS_DECLARE_SIMPLE_RESPONSE_T(Models, Beatmap);
     BEATSAVER_PLUSPLUS_DECLARE_SIMPLE_RESPONSE_T(Models, UserDetail);
 
-    struct BeatmapMapResponse : public WebUtils::GenericResponse<std::unordered_map<std::string, Models::Beatmap>> {
+    struct BEATSAVER_PLUSPLUS_EXPORT BeatmapMapResponse : public WebUtils::GenericResponse<std::unordered_map<std::string, Models::Beatmap>> {
         bool AcceptData(std::span<uint8_t const> data) override {
             rapidjson::Document doc;
             doc.Parse((char*)data.data(), data.size());
@@ -75,7 +75,7 @@ namespace BeatSaver::API {
         }
     };
 
-    struct UserDetailArrayResponse : public WebUtils::GenericResponse<std::vector<Models::UserDetail>> {
+    struct BEATSAVER_PLUSPLUS_EXPORT UserDetailArrayResponse : public WebUtils::GenericResponse<std::vector<Models::UserDetail>> {
         bool AcceptData(std::span<uint8_t const> data) override {
             rapidjson::Document doc;
             doc.Parse((char*)data.data(), data.size());
@@ -97,7 +97,7 @@ namespace BeatSaver::API {
     };
 #pragma endregion // responses
 
-    enum class Filter {
+    enum class BEATSAVER_PLUSPLUS_EXPORT Filter {
         Ignore, // ignore this filter
         Include, // include maps with this
         Exclude, // exclude maps with this
@@ -116,7 +116,7 @@ namespace BeatSaver::API {
     template<auto T>
     using BeatSaverResponse_t = BeatSaverResponse<T>::t;
 
-#define DECLARE_BEATSAVER_RESPONSE_T(func, ...) template<> struct BeatSaverResponse<&func> { using t = __VA_ARGS__; }
+#define DECLARE_BEATSAVER_RESPONSE_T(func, ...) template<> struct BEATSAVER_PLUSPLUS_EXPORT BeatSaverResponse<&func> { using t = __VA_ARGS__; }
 
 #pragma region maps
     enum class LatestSortOrder {
@@ -128,7 +128,7 @@ namespace BeatSaver::API {
     };
 
     /// @brief misc query options for GetLatest request
-    struct LatestQueryOptions {
+    struct BEATSAVER_PLUSPLUS_EXPORT LatestQueryOptions {
         /// @brief order by which to sort the latest maps
         std::optional<LatestSortOrder> sortOrder = std::nullopt;
         /// @brief page size for the search
@@ -147,7 +147,7 @@ namespace BeatSaver::API {
     };
 
     /// @brief misc query options for GetCollaborationsByUser request
-    struct CollaborationQueryOptions {
+    struct BEATSAVER_PLUSPLUS_EXPORT CollaborationQueryOptions {
         /// @brief only maps made before this timestamp will be returned
         std::optional<timestamp> before = std::nullopt;
         /// @brief size of page returned
@@ -331,14 +331,14 @@ namespace BeatSaver::API {
 #pragma endregion // users
 
 #pragma region search
-    enum class SearchSortOrder {
+    enum class BEATSAVER_PLUSPLUS_EXPORT SearchSortOrder {
         Latest,
         Relevance,
         Rating,
         Curated
     };
 
-    struct SearchQueryOptions {
+    struct BEATSAVER_PLUSPLUS_EXPORT SearchQueryOptions {
         /// @brief query to filter on
         std::optional<std::string> query = std::nullopt;
         /// @brief page index of the results
@@ -427,7 +427,7 @@ namespace BeatSaver::API {
     };
 
     /// @brief response to be used with webutils, can only be used with GetInto due to requiring to know where to unzip the file
-    struct DownloadBeatmapResponse : public WebUtils::GenericResponse<std::filesystem::path> {
+    struct BEATSAVER_PLUSPLUS_EXPORT DownloadBeatmapResponse : public WebUtils::GenericResponse<std::filesystem::path> {
         DownloadBeatmapResponse(BeatmapDownloadInfo const& info) : info(info) {}
         BeatmapDownloadInfo const info;
 
@@ -437,7 +437,7 @@ namespace BeatSaver::API {
     static_assert(!std::is_default_constructible_v<DownloadBeatmapResponse>, "DownloadBeatmapResponse can't be default constructible!");
 
     /// @brief request to be used with webutils, should be used with the RatelimitedDispatcher
-    struct DownloadBeatmapRequest : public WebUtils::IRequest {
+    struct BEATSAVER_PLUSPLUS_EXPORT DownloadBeatmapRequest : public WebUtils::IRequest {
         WebUtils::URLOptions url;
         DownloadBeatmapResponse response;
 
@@ -514,6 +514,11 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetPreviewURLOptions, WebUtils::DataResponse);
 
+    /// @brief download multiple beatmaps in a ratelimited fashion
+    /// @param infos the beatmaps to download
+    /// @param maxConcurrency maximum amount of extra threads to use
+    /// @param progressReport reporter method that lets you know the progress of the downloads
+    /// @return map of beatmap keys to path results, if a beatmap does not appear in here, it didn't succeed, and if the value is nullopt it didn't download
     inline std::unordered_map<std::string, std::optional<std::filesystem::path>> DownloadBeatmaps(std::span<BeatmapDownloadInfo const> infos, int maxConcurrency = 4, std::function<void(int, int)> progressReport = nullptr) {
         std::mutex resultMutex;
         std::unordered_map<std::string, std::optional<std::filesystem::path>> results;
@@ -551,6 +556,11 @@ namespace BeatSaver::API {
         return results;
     }
 
+    /// @brief download multiple beatmaps in a ratelimited fashion
+    /// @param infos the beatmaps to download
+    /// @param maxConcurrency maximum amount of extra threads to use
+    /// @param onFinished method called when finished, gets a map of beatmap keys to path results, if a beatmap does not appear in here, it didn't succeed, and if the value is nullopt it didn't download
+    /// @param progressReport reporter method that lets you know the progress of the downloads
     inline void DownloadBeatmapsAsync(std::span<BeatmapDownloadInfo const> infos, std::function<void(std::unordered_map<std::string, std::optional<std::filesystem::path>>)> onFinished, int maxConcurrency = 4, std::function<void(int, int)> progressReport = nullptr) {
         if (!onFinished) return;
 
