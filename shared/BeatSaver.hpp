@@ -5,7 +5,9 @@
 #include "./Models/Page.hpp"
 #include "./Models/UserDetail.hpp"
 
+#include "BeatSaver.hpp"
 #include "web-utils/shared/DownloaderUtility.hpp"
+#include "web-utils/shared/RatelimitedDispatcher.hpp"
 
 #include <chrono>
 #include <future>
@@ -26,6 +28,9 @@ static __attribute__((constructor)) void beatsaver_plusplus_auto_init() {
 #define BEATSAVER_CDN_URL "https://cdn.beatsaver.com"
 
 namespace BeatSaver::API {
+    /// @brief method to get the downloader that beatsaverplusplus uses internally
+    BEATSAVER_PLUSPLUS_EXPORT WebUtils::DownloaderUtility const& GetBeatsaverDownloader();
+
     /// @brief initialize with the root dir where songs should be output
     BEATSAVER_PLUSPLUS_EXPORT void Init(std::filesystem::path defaultOutputRootPath);
 
@@ -43,10 +48,54 @@ namespace BeatSaver::API {
     /// @param outputPath the output directory, should not be CustomLevels, but the output path
     /// @return bool success, if download failed or extraction of the file failed, false will return.
     bool BEATSAVER_PLUSPLUS_EXPORT DownloadSongZip(std::string url, std::filesystem::path outputPath, std::function<void(float)> progressReport = nullptr);
+#pragma region responses
+    BEATSAVER_PLUSPLUS_DECLARE_SIMPLE_RESPONSE_T(Models, Page);
+    BEATSAVER_PLUSPLUS_DECLARE_SIMPLE_RESPONSE_T(Models, Beatmap);
+    BEATSAVER_PLUSPLUS_DECLARE_SIMPLE_RESPONSE_T(Models, UserDetail);
 
-    DECLARE_SIMPLE_RESPONSE_T(Models, Page);
-    DECLARE_SIMPLE_RESPONSE_T(Models, Beatmap);
-    DECLARE_SIMPLE_RESPONSE_T(Models, UserDetail);
+    struct BeatmapMapResponse : public WebUtils::GenericResponse<std::unordered_map<std::string, Models::Beatmap>> {
+        bool AcceptData(std::span<uint8_t const> data) override {
+            rapidjson::Document doc;
+            doc.Parse((char*)data.data(), data.size());
+            if (doc.HasParseError()) return false;
+            try {
+                auto memberEnd = doc.MemberEnd();
+                BEATSAVER_PLUSPLUS_ERROR_CHECK(doc);
+                std::unordered_map<std::string, Models::Beatmap> output;
+                for (auto itr = doc.MemberBegin(); itr != memberEnd; itr++) {
+                    output[itr->name.Get<std::string>()] = itr->value.Get<Models::Beatmap>();
+                }
+
+                responseData = std::move(output);
+            } catch (BeatSaver::JsonException const& e) {
+                responseData = std::nullopt;
+                return false;
+            }
+            return true;
+        }
+    };
+
+    struct UserDetailArrayResponse : public WebUtils::GenericResponse<std::vector<Models::UserDetail>> {
+        bool AcceptData(std::span<uint8_t const> data) override {
+            rapidjson::Document doc;
+            doc.Parse((char*)data.data(), data.size());
+            if (doc.HasParseError()) return false;
+            try {
+                BEATSAVER_PLUSPLUS_ERROR_CHECK(doc);
+                std::vector<Models::UserDetail> output;
+                for (auto& v : doc.GetArray()) {
+                    output.emplace_back(v.Get<Models::UserDetail>());
+                }
+
+                responseData = std::move(output);
+            } catch (BeatSaver::JsonException const& e) {
+                responseData = std::nullopt;
+                return false;
+            }
+            return true;
+        }
+    };
+#pragma endregion // responses
 
     enum class Filter {
         Ignore, // ignore this filter
@@ -61,216 +110,457 @@ namespace BeatSaver::API {
     template<typename T>
     using finished_opt_function = std::function<void(std::optional<T>)>;
 
-    namespace Maps {
-        enum class LatestSortOrder {
-            FirstPublished,
-            Updated,
-            LastPublished,
-            Created,
-            Curated
+    template<auto T>
+    struct BeatSaverResponse;
+
+    template<auto T>
+    using BeatSaverResponse_t = BeatSaverResponse<T>::t;
+
+#define DECLARE_BEATSAVER_RESPONSE_T(func, ...) template<> struct BeatSaverResponse<&func> { using t = __VA_ARGS__; }
+
+#pragma region maps
+    enum class LatestSortOrder {
+        FirstPublished,
+        Updated,
+        LastPublished,
+        Created,
+        Curated
+    };
+
+    /// @brief misc query options for GetLatest request
+    struct LatestQueryOptions {
+        /// @brief order by which to sort the latest maps
+        std::optional<LatestSortOrder> sortOrder = std::nullopt;
+        /// @brief page size for the search
+        std::optional<int> pageSize = std::nullopt;
+        /// @brief whether to include verified mappers
+        Filter verified = Filter::Ignore;
+        /// @brief whether to include auto mapped levels
+        Filter automapper = Filter::Exclude;
+
+        /// @brief only return maps before the given time
+        std::optional<timestamp> before = std::nullopt;
+        /// @brief only return maps after the given time
+        std::optional<timestamp> after = std::nullopt;
+
+        WebUtils::URLOptions::QueryMap GetQueries() const;
+    };
+
+    /// @brief misc query options for GetCollaborationsByUser request
+    struct CollaborationQueryOptions {
+        /// @brief only maps made before this timestamp will be returned
+        std::optional<timestamp> before = std::nullopt;
+        /// @brief size of page returned
+        std::optional<int> pageSize = std::nullopt;
+
+        WebUtils::URLOptions::QueryMap GetQueries() const;
+    };
+
+    /// @brief creates the necessary url options to download a beatmap info with the provided key
+    /// @param key the key to get the info for
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::BeatmapResponse
+    inline WebUtils::URLOptions GetBeatmapByKeyURLOptions(std::string key) {
+        return WebUtils::URLOptions{
+            fmt::format(BEATSAVER_API_URL "/maps/id/{}", key)
         };
-
-        struct LatestQueryOptions {
-            /// @brief order by which to sort the latest maps
-            std::optional<LatestSortOrder> sortOrder = std::nullopt;
-            /// @brief page size for the search
-            std::optional<int> pageSize = std::nullopt;
-            /// @brief whether to include verified mappers
-            Filter verified = Filter::Ignore;
-            /// @brief whether to include auto mapped levels
-            Filter automapper = Filter::Exclude;
-
-            /// @brief only return maps before the given time
-            std::optional<timestamp> before = std::nullopt;
-            /// @brief only return maps after the given time
-            std::optional<timestamp> after = std::nullopt;
-
-            WebUtils::URLOptions::QueryMap GetQueries() const;
-        };
-
-        struct CollaborationQueryOptions {
-            /// @brief only maps made before this timestamp will be returned
-            std::optional<timestamp> before = std::nullopt;
-            /// @brief size of page returned
-            std::optional<int> pageSize = std::nullopt;
-
-            WebUtils::URLOptions::QueryMap GetQueries() const;
-        };
-
-        /// @brief get a beatmap by its key (id)
-        BEATSAVER_PLUSPLUS_EXPORT void GetBeatmapByKeyAsync(std::string key, finished_opt_function<Models::Beatmap> onFinished);
-
-        /// @brief get multiple beatmaps by their keys (ids)
-        BEATSAVER_PLUSPLUS_EXPORT void GetBeatmapsByKeysAsync(std::span<std::string const> keys, finished_opt_function<std::unordered_map<std::string, Models::Beatmap>> onFinished);
-
-        /// @brief get a beatmap by its hash
-        BEATSAVER_PLUSPLUS_EXPORT void GetBeatmapByHashAsync(std::string hash, finished_opt_function<Models::Beatmap> onFinished);
-
-        /// @brief get a page of beatmaps by a user
-        BEATSAVER_PLUSPLUS_EXPORT void GetBeatmapsByUserAsync(int id, int page, finished_opt_function<Models::Page> onFinished);
-
-        /// @brief get a page of collaboration beatmaps by a user
-        BEATSAVER_PLUSPLUS_EXPORT void GetCollaborationsByUserAsync(int id, finished_opt_function<Models::Page> onFinished, CollaborationQueryOptions collaborationOptions = {});
-
-        /// @brief get a page of the latest maps
-        BEATSAVER_PLUSPLUS_EXPORT void GetLatestAsync(finished_opt_function<Models::Page> onFinished, LatestQueryOptions queryOptions = {});
-
-        /// @brief get a beatmap by its key (id)
-        BEATSAVER_PLUSPLUS_EXPORT std::optional<Models::Beatmap> GetBeatmapByKey(std::string key);
-
-        /// @brief get multiple beatmaps by their keys (ids)
-        BEATSAVER_PLUSPLUS_EXPORT std::optional<std::unordered_map<std::string, Models::Beatmap>> GetBeatmapsByKeys(std::span<std::string const> keys);
-
-        /// @brief get a beatmap by its hash
-        BEATSAVER_PLUSPLUS_EXPORT std::optional<Models::Beatmap> GetBeatmapByHash(std::string hash);
-
-        /// @brief get a page of beatmaps by a user
-        BEATSAVER_PLUSPLUS_EXPORT std::optional<Models::Page> GetBeatmapsByUser(int id, int page);
-
-        /// @brief get a page of collaboration beatmaps by a user
-        BEATSAVER_PLUSPLUS_EXPORT std::optional<Models::Page> GetCollaborationsByUser(int id, CollaborationQueryOptions = {});
-
-        /// @brief get a page of the latest maps
-        BEATSAVER_PLUSPLUS_EXPORT std::optional<Models::Page> GetLatest(LatestQueryOptions queryOptions = {});
     }
 
-    namespace Users {
-        /// @brief get a users details by their id
-        BEATSAVER_PLUSPLUS_EXPORT void GetUserByIdAsync(int id, finished_opt_function<Models::UserDetail> onFinished);
+    DECLARE_BEATSAVER_RESPONSE_T(GetBeatmapByKeyURLOptions, BeatmapResponse);
 
-        /// @brief get multiple users details by their id
-        BEATSAVER_PLUSPLUS_EXPORT void GetUsersByIdsAsync(std::span<int const> id, finished_opt_function<std::unordered_map<int, Models::UserDetail>> onFinished);
-
-        /// @brief get a users details by their name
-        BEATSAVER_PLUSPLUS_EXPORT void GetUserByNameAsync(std::string userName, finished_opt_function<Models::UserDetail> onFinished);
-
-        /// @brief get a users details by their id
-        BEATSAVER_PLUSPLUS_EXPORT std::optional<Models::UserDetail> GetUserById(int id);
-
-        /// @brief get multiple users details by their id
-        BEATSAVER_PLUSPLUS_EXPORT std::optional<std::unordered_map<int, Models::UserDetail>> GetUsersByIds(std::span<int const> ids);
-
-        /// @brief get a users details by their name
-        BEATSAVER_PLUSPLUS_EXPORT std::optional<Models::UserDetail> GetUserByName(std::string userName);
+    /// @brief creates the necessary url options to download multiple beatmaps infos with the provided keys
+    /// @param keys span of keys to get the beatmap infos for
+    /// @return urloptions to use with webutils, expects a return of map<std::string (key), BeatSaver::API::BeatmapResponse>
+    inline WebUtils::URLOptions GetBeatmapsByKeysURLOptions(std::span<std::string const> keys) {
+        // this api call limits you to providing 1-50 ids, so we take a view of the span that limits this
+        auto subSpan = keys.subspan(0, std::min<std::size_t>(50, keys.size()));
+        return WebUtils::URLOptions{
+            fmt::format(BEATSAVER_API_URL "/maps/ids/{}", fmt::join(subSpan, ","))
+        };
     }
 
-    namespace Search {
-        enum class SearchSortOrder {
-            Latest,
-            Relevance,
-            Rating,
-            Curated
-        };
+    DECLARE_BEATSAVER_RESPONSE_T(GetBeatmapsByKeysURLOptions, BeatmapMapResponse);
 
-        struct SearchQueryOptions {
-            /// @brief query to filter on
-            std::optional<std::string> query = std::nullopt;
-            /// @brief page index of the results
-            std::optional<int> pageIndex = std::nullopt;
-            /// @brief order by which to sort
-            SearchSortOrder sortOrder = SearchSortOrder::Latest;
-            /// @brief whether to include automapper in the results
-            Filter automapper = Filter::Exclude;
-            /// @brief whether to include chroma in the results
-            Filter chroma = Filter::Ignore;
-            /// @brief whether to include noodle in the results
-            Filter noodle = Filter::Ignore;
-            /// @brief whether to include mapping ext in the results
-            Filter me = Filter::Ignore;
-            /// @brief whether to include cinema in the results
-            Filter cinema = Filter::Ignore;
-            /// @brief whether to include ranked in the results
-            Filter ranked = Filter::Ignore;
-            /// @brief whether to include verified in the results
-            Filter verified = Filter::Ignore;
-            /// @brief whether to include fullspread in the results
-            Filter fullspread = Filter::Ignore;
-            /// @brief start of time filter
-            std::optional<timestamp> from = std::nullopt;
-            /// @brief end of time filter
-            std::optional<timestamp> to = std::nullopt;
-            /// @brief tags to include in the search
-            std::vector<std::string> includeTags = {};
-            /// @brief tags to exclude in the search
-            std::vector<std::string> excludeTags = {};
-            /// @brief max bpm allowed
-            std::optional<float> maxBpm = std::nullopt;
-            /// @brief min bpm allowed
-            std::optional<float> minBpm = std::nullopt;
-            /// @brief max length allowed
-            std::optional<int> maxDuration = std::nullopt;
-            /// @brief min length allowed
-            std::optional<int> minDuration = std::nullopt;
-            /// @brief max nps allowed
-            std::optional<float> maxNps = std::nullopt;
-            /// @brief min nps allowed
-            std::optional<float> minNps = std::nullopt;
-            /// @brief max rating allowed
-            std::optional<float> maxRating = std::nullopt;
-            /// @brief min rating allowed
-            std::optional<float> minRating = std::nullopt;
-
-            WebUtils::URLOptions::QueryMap GetQueries() const;
-        };
-
-        /// @brief search for beatmaps with pagination
-        BEATSAVER_PLUSPLUS_EXPORT void GetPageAsync(int page, finished_opt_function<Models::Page> onFinished, SearchQueryOptions queryOptions = {});
-
-        /// @brief search for beatmaps with pagination
-        BEATSAVER_PLUSPLUS_EXPORT std::optional<Models::Page> GetPage(int page, SearchQueryOptions queryOptions = {});
-
-        /// @brief provides a readonly span of some map feel tags that are available on beatsaver. these tags were pulled at a moment in time and are not guaranteed to still exist
-        BEATSAVER_PLUSPLUS_EXPORT std::span<const std::string> GetMapFeelTags();
-
-        /// @brief provides a readonly span of some genre tags that are available on beatsaver. these tags were pulled at a moment in time and are not guaranteed to still exist
-        BEATSAVER_PLUSPLUS_EXPORT std::span<const std::string> GetGenreTags();
+    /// @brief creates the necessary url options to download multiple beatmaps infos with the provided keys
+    /// @param keys the keys to get the beatmap infos for
+    /// @return urloptions to use with webutils, expects a return of map<std::string (key), BeatSaver::API::BeatmapResponse>
+    template<typename T>
+    requires(std::is_constructible_v<T, std::span<std::string const>> && !std::is_same_v<T, std::span<std::string const>>)
+    inline WebUtils::URLOptions GetBeatmapsByKeysURLOptions(T keys) {
+        return GetBeatmapsByKeysURLOptions(std::span<std::string const>(keys));
     }
 
-    namespace Download {
+    /// @brief creates the necessary url options to download a beatmap info with the provided hash
+    /// @param hash the hash to get the info for
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::BeatmapResponse
+    inline WebUtils::URLOptions GetBeatmapByHashURLOptions(std::string hash) {
+        return WebUtils::URLOptions{
+            fmt::format(BEATSAVER_API_URL "/maps/hash/{}", hash)
+        };
+    }
 
-        /// @brief helper struct containing the information for a map download
-        struct BEATSAVER_PLUSPLUS_EXPORT BeatmapDownloadInfo {
-            BeatmapDownloadInfo() = default;
-            /// @brief info from direct values
-            BeatmapDownloadInfo(std::string Key, std::string DownloadURL, std::string FolderName) : Key(Key), DownloadURL(DownloadURL), FolderName(FolderName) {}
-            /// @brief info from a beatmap, gets the front version to download
-            BeatmapDownloadInfo(Models::Beatmap const& beatmap) : BeatmapDownloadInfo(beatmap, beatmap.Versions.front()) {}
-            /// @brief info from a beatmap and version
-            BeatmapDownloadInfo(Models::Beatmap const& beatmap, Models::BeatmapVersion const& version);
+    DECLARE_BEATSAVER_RESPONSE_T(GetBeatmapByHashURLOptions, BeatmapResponse);
 
-            std::string const Key;
-            std::string const DownloadURL;
-            std::string const FolderName;
+    /// @brief creates the necessary url options to download multiple beatmaps infos with the provided hashes
+    /// @param hashes span of hashes to get the beatmap infos for
+    /// @return urloptions to use with webutils, expects a return of map<std::string (hash), BeatSaver::API::BeatmapResponse>
+    inline WebUtils::URLOptions GetBeatmapsByHashesURLOptions(std::span<std::string const> hashes) {
+        // this api call limits you to providing 1-50 hashes, so we take a view of the span that limits this
+        auto subSpan = hashes.subspan(0, std::min<std::size_t>(50, hashes.size()));
+        return WebUtils::URLOptions{
+            fmt::format(BEATSAVER_API_URL "/maps/hash/{}", fmt::join(subSpan, ","))
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetBeatmapsByHashesURLOptions, BeatmapMapResponse);
+
+    /// @brief creates the necessary url options to download multiple beatmaps infos with the provided hashes
+    /// @param hashes span of hashes to get the beatmap infos for
+    /// @return urloptions to use with webutils, expects a return of map<std::string (hash), BeatSaver::API::BeatmapResponse>
+    template<typename T>
+    requires(std::is_constructible_v<T, std::span<std::string const>> && !std::is_same_v<T, std::span<std::string const>>)
+    inline WebUtils::URLOptions GetBeatmapsByHashesURLOptions(T hashes) {
+        return GetBeatmapsByHashesURLOptions(std::span<std::string const>(hashes));
+    }
+
+    /// @brief creates the necessary url options to get a page of maps by the given uploader
+    /// @param id the user id to get a page for
+    /// @param page the page to get levels for
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::PageResponse
+    inline WebUtils::URLOptions GetBeatmapsByUserURLOptions(int id, int page = 0) {
+        return WebUtils::URLOptions{
+            fmt::format(BEATSAVER_API_URL "/maps/uploader/{}/{}", id, page)
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetBeatmapsByUserURLOptions, PageResponse);
+
+    /// @brief creates the necessary url options to get a page of collaborations by the given uploader
+    /// @param id the user id to get a page for
+    /// @param queryOptions misc query options
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::PageResponse
+    inline WebUtils::URLOptions GetCollaborationsByUserURLOptions(int id, CollaborationQueryOptions queryOptions = {}) {
+        return WebUtils::URLOptions{
+            fmt::format(BEATSAVER_API_URL "/maps/uploader/{}", id),
+            queryOptions.GetQueries()
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetCollaborationsByUserURLOptions, PageResponse);
+
+    /// @brief creates the necessary url options to get a page of the latest maps on beatsaver
+    /// @param id the user id to get a page for
+    /// @param queryOptions misc query options
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::PageResponse
+    inline WebUtils::URLOptions GetLatestURLOptions(LatestQueryOptions queryOptions = {}) {
+        return WebUtils::URLOptions{
+            fmt::format(BEATSAVER_API_URL "/maps/latest"),
+            queryOptions.GetQueries()
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetLatestURLOptions, PageResponse);
+
+    /// @brief creates the necessary url options to get a page of maps on beatsaver ordered by plays
+    /// @param page the page to get
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::PageResponse
+    inline WebUtils::URLOptions GetPlaysURLOptions(int page = 0) {
+        return WebUtils::URLOptions{
+            fmt::format(BEATSAVER_API_URL "/maps/plays/{}", page)
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetPlaysURLOptions, PageResponse);
+
+#pragma endregion // maps
+
+#pragma region users
+    /// @brief creates the necessary url options to get a users details
+    /// @param id the user id to get the details for
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::UserDetailResponse
+    inline WebUtils::URLOptions GetUserByIdURLOptions(int id) {
+        return WebUtils::URLOptions{
+            fmt::format(BEATSAVER_API_URL "/users/id/{}", id)
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetUserByIdURLOptions, UserDetailResponse);
+
+    /// @brief creates the necessary url options to get multiple users details in one request
+    /// @param ids the user ids to get the details for
+    /// @return urloptions to use with webutils, expects a return of array<BeatSaver::API::UserDetailResponse>
+    inline WebUtils::URLOptions GetUsersByIdsURLOptions(std::span<int const> ids) {
+        auto subSpan = ids.subspan(0, std::min<std::size_t>(50, ids.size()));
+        return WebUtils::URLOptions{
+            fmt::format(BEATSAVER_API_URL "/users/ids/{}", fmt::join(subSpan, ","))
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetUsersByIdsURLOptions, UserDetailArrayResponse);
+
+    /// @brief creates the necessary url options to get multiple users details in one request
+    /// @param ids the user ids to get the details for
+    /// @return urloptions to use with webutils, expects a return of array<BeatSaver::API::UserDetailResponse>
+    template<typename T>
+    requires(std::is_constructible_v<T, std::span<int const>> && !std::is_same_v<T, std::span<int const>>)
+    inline WebUtils::URLOptions GetUsersByIdsURLOptions(T ids) {
+        return GetUsersByIdsURLOptions(std::span<int const>(ids));
+    }
+
+    /// @brief creates the necessary url options to get a users details
+    /// @param userName the name to get the details for
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::UserDetailResponse
+    inline WebUtils::URLOptions GetUserByNameURLOptions(std::string userName) {
+        return WebUtils::URLOptions{
+            fmt::format(BEATSAVER_API_URL "/users/name/{}", userName)
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetUserByNameURLOptions, UserDetailResponse);
+
+    /// @brief creates the necessary url options to download avatar image data
+    /// @param version the beatmap version to create the url options for
+    /// @return urloptions to use with webutils, expects a return of WebUtils::DataResponse, though if bsml is used WebUtils::SpriteResponse or WebUtils::TextureResponse may also be used
+    inline WebUtils::URLOptions GetAvatarImageURLOptions(Models::UserDetail const& userDetail) {
+        return WebUtils::URLOptions {
+            userDetail.AvatarURL
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetAvatarImageURLOptions, WebUtils::DataResponse);
+
+#pragma endregion // users
+
+#pragma region search
+    enum class SearchSortOrder {
+        Latest,
+        Relevance,
+        Rating,
+        Curated
+    };
+
+    struct SearchQueryOptions {
+        /// @brief query to filter on
+        std::optional<std::string> query = std::nullopt;
+        /// @brief page index of the results
+        std::optional<int> pageIndex = std::nullopt;
+        /// @brief order by which to sort
+        SearchSortOrder sortOrder = SearchSortOrder::Latest;
+        /// @brief whether to include automapper in the results
+        Filter automapper = Filter::Exclude;
+        /// @brief whether to include chroma in the results
+        Filter chroma = Filter::Ignore;
+        /// @brief whether to include noodle in the results
+        Filter noodle = Filter::Ignore;
+        /// @brief whether to include mapping ext in the results
+        Filter me = Filter::Ignore;
+        /// @brief whether to include cinema in the results
+        Filter cinema = Filter::Ignore;
+        /// @brief whether to include ranked in the results
+        Filter ranked = Filter::Ignore;
+        /// @brief whether to include verified in the results
+        Filter verified = Filter::Ignore;
+        /// @brief whether to include fullspread in the results
+        Filter fullspread = Filter::Ignore;
+        /// @brief start of time filter
+        std::optional<timestamp> from = std::nullopt;
+        /// @brief end of time filter
+        std::optional<timestamp> to = std::nullopt;
+        /// @brief tags to include in the search
+        std::vector<std::string> includeTags = {};
+        /// @brief tags to exclude in the search
+        std::vector<std::string> excludeTags = {};
+        /// @brief max bpm allowed
+        std::optional<float> maxBpm = std::nullopt;
+        /// @brief min bpm allowed
+        std::optional<float> minBpm = std::nullopt;
+        /// @brief max length allowed
+        std::optional<int> maxDuration = std::nullopt;
+        /// @brief min length allowed
+        std::optional<int> minDuration = std::nullopt;
+        /// @brief max nps allowed
+        std::optional<float> maxNps = std::nullopt;
+        /// @brief min nps allowed
+        std::optional<float> minNps = std::nullopt;
+        /// @brief max rating allowed
+        std::optional<float> maxRating = std::nullopt;
+        /// @brief min rating allowed
+        std::optional<float> minRating = std::nullopt;
+
+        WebUtils::URLOptions::QueryMap GetQueries() const;
+    };
+
+    /// @brief creates the necessary url options to search for maps
+    /// @param page the page to go to for the result
+    /// @param queryOptions misc query options for the search
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::PageResponse
+    inline WebUtils::URLOptions GetPageURLOptions(int page, SearchQueryOptions queryOptions = {}) {
+        return WebUtils::URLOptions {
+            fmt::format(BEATSAVER_API_URL "/search/text/{}", page),
+            queryOptions.GetQueries()
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetPageURLOptions, PageResponse);
+
+    /// @brief provides a readonly span of some map feel tags that are available on beatsaver. these tags were pulled at a moment in time and are not guaranteed to still exist
+    BEATSAVER_PLUSPLUS_EXPORT std::span<const std::string> GetMapFeelTags();
+
+    /// @brief provides a readonly span of some genre tags that are available on beatsaver. these tags were pulled at a moment in time and are not guaranteed to still exist
+    BEATSAVER_PLUSPLUS_EXPORT std::span<const std::string> GetGenreTags();
+
+#pragma endregion // search
+
+#pragma region download
+    /// @brief helper struct containing the information for a map download
+    struct BEATSAVER_PLUSPLUS_EXPORT BeatmapDownloadInfo {
+        BeatmapDownloadInfo() = default;
+        /// @brief info from direct values
+        BeatmapDownloadInfo(std::string Key, std::string DownloadURL, std::string FolderName) : Key(Key), DownloadURL(DownloadURL), FolderName(FolderName) {}
+        /// @brief info from a beatmap, gets the front version to download
+        BeatmapDownloadInfo(Models::Beatmap const& beatmap) : BeatmapDownloadInfo(beatmap, beatmap.Versions.front()) {}
+        /// @brief info from a beatmap and version
+        BeatmapDownloadInfo(Models::Beatmap const& beatmap, Models::BeatmapVersion const& version) : Key(version.Key.value_or(beatmap.Id)), DownloadURL(version.DownloadURL), FolderName(fmt::format("{} ({} - {})", Key, beatmap.Metadata.SongName, beatmap.Metadata.LevelAuthorName)) {}
+
+        std::string const Key;
+        std::string const DownloadURL;
+        std::string const FolderName;
+    };
+
+    /// @brief response to be used with webutils, can only be used with GetInto due to requiring to know where to unzip the file
+    struct DownloadBeatmapResponse : public WebUtils::GenericResponse<std::filesystem::path> {
+        DownloadBeatmapResponse(BeatmapDownloadInfo const& info) : info(info) {}
+        BeatmapDownloadInfo const info;
+
+        virtual bool AcceptData(std::span<const uint8_t> data) override;
+    };
+
+    static_assert(!std::is_default_constructible_v<DownloadBeatmapResponse>, "DownloadBeatmapResponse can't be default constructible!");
+
+    /// @brief request to be used with webutils, should be used with the RatelimitedDispatcher
+    struct DownloadBeatmapRequest : public WebUtils::IRequest {
+        WebUtils::URLOptions url;
+        DownloadBeatmapResponse response;
+
+        DownloadBeatmapRequest(BeatmapDownloadInfo const& downloadInfo) : url(downloadInfo.DownloadURL), response(downloadInfo) {}
+        virtual ~DownloadBeatmapRequest() override = default;
+
+        virtual WebUtils::URLOptions const& get_URL() const override { return url; };
+        virtual WebUtils::IResponse* get_TargetResponse() override { return &response; };
+        virtual WebUtils::IResponse const* get_TargetResponse() const override { return &response; }
+
+        __declspec(property(get=get_TargetResponse)) WebUtils::IResponse* TargetResponse;
+        __declspec(property(get=get_URL)) WebUtils::URLOptions const& URL;
+    };
+
+    static_assert(!std::is_default_constructible_v<DownloadBeatmapRequest>, "DownloadBeatmapRequest can't be default constructible!");
+
+    /// @brief creates both the url options and target beatmap response for the given download info
+    /// @param info download info for a map
+    /// @return urloptions to use in web utils, as well as a download beatmap response to use to automatically unzip the map into the configured path
+    inline std::pair<WebUtils::URLOptions, DownloadBeatmapResponse> DownloadBeatmapURLOptionsAndResponse(BeatmapDownloadInfo info) {
+        return {
+            WebUtils::URLOptions(info.DownloadURL),
+            DownloadBeatmapResponse(info)
+        };
+    }
+
+    /// @brief creates a download request for use with the ratelimited dispatcher from webutils
+    /// @param info the download info for which to create the request
+    inline std::unique_ptr<DownloadBeatmapRequest> CreateDownloadBeatmapRequest(BeatmapDownloadInfo info) {
+        return std::make_unique<DownloadBeatmapRequest>(info);
+    }
+
+    /// @brief method to download a beatmap synchronously
+    /// @param info the download info for the map to download
+    /// @param progressReport callback for reporting progress
+    /// @return optional path, if set the download was succesful and the map can be found @ that path, nullopt if failed
+    inline std::optional<std::filesystem::path> DownloadBeatmap(BeatmapDownloadInfo info, std::function<void(float)> progressReport = nullptr) {
+        auto [options, response] = DownloadBeatmapURLOptionsAndResponse(info);
+        GetBeatsaverDownloader().GetInto(options, &response, progressReport);
+        return response.responseData;
+    }
+
+    /// @brief downloads a beatmap asynchronously, and calls onFinished after it concludes
+    /// @param info the download info for the map to download
+    /// @param onFinished the method to call once the request is done
+    /// @param progressReport callback for reporting progress
+    inline void DownloadBeatmapAsync(BeatmapDownloadInfo info, finished_opt_function<std::filesystem::path> onFinished, std::function<void(float)> progressReport = nullptr) {
+        if (!onFinished) return;
+
+        std::thread([](BeatmapDownloadInfo info, finished_opt_function<std::filesystem::path> onFinished){
+            onFinished(DownloadBeatmap(info));
+        }, std::forward<BeatmapDownloadInfo>(info), std::forward<finished_opt_function<std::filesystem::path>>(onFinished)).detach();
+    }
+
+    /// @brief creates the necessary url options to download cover image data
+    /// @param version the beatmap version to create the url options for
+    /// @return urloptions to use with webutils, expects a return of WebUtils::DataResponse, though if bsml is used WebUtils::SpriteResponse or WebUtils::TextureResponse may also be used
+    inline WebUtils::URLOptions GetCoverImageURLOptions(Models::BeatmapVersion const& version) {
+        return WebUtils::URLOptions {
+            version.CoverURL
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetCoverImageURLOptions, WebUtils::DataResponse);
+
+    /// @brief creates the necessary url options to download preview data
+    /// @param version the beatmap version to create the url options for
+    /// @return urloptions to use with webutils, expects a return of WebUtils::DataResponse
+    inline WebUtils::URLOptions GetPreviewURLOptions(Models::BeatmapVersion const& version) {
+        return WebUtils::URLOptions {
+            version.PreviewURL
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetPreviewURLOptions, WebUtils::DataResponse);
+
+    inline std::unordered_map<std::string, std::optional<std::filesystem::path>> DownloadBeatmaps(std::span<BeatmapDownloadInfo const> infos, int maxConcurrency = 4, std::function<void(int, int)> progressReport = nullptr) {
+        std::mutex resultMutex;
+        std::unordered_map<std::string, std::optional<std::filesystem::path>> results;
+        auto setKeyValue = [&resultMutex, &results](std::string key, std::optional<std::filesystem::path> value){
+            std::unique_lock lock(resultMutex);
+            results[key] = value;
+        };
+        WebUtils::RatelimitedDispatcher rl;
+        rl.downloader = GetBeatsaverDownloader();
+        rl.maxConcurrentRequests = std::max(maxConcurrency, 1);
+
+        int total = infos.size();
+        std::atomic_int completed = 0;
+
+        rl.onRequestFinished = [setKeyValue, &progressReport, total, &completed](bool success, auto req) -> std::optional<WebUtils::RatelimitedDispatcher::RetryOptions> {
+            if (!success) return WebUtils::RatelimitedDispatcher::RetryOptions{std::chrono::milliseconds(50) };
+            completed++;
+
+            auto beatmapReq = dynamic_cast<DownloadBeatmapRequest*>(req);
+            if (!beatmapReq) return std::nullopt;
+
+            auto key = beatmapReq->response.info.Key;
+            setKeyValue(key, beatmapReq->response.responseData);
+            if (progressReport) progressReport(total, completed);
+
+            return std::nullopt;
         };
 
-        /// @brief download a beatmap from the provided beatmapversion
-        BEATSAVER_PLUSPLUS_EXPORT void DownloadBeatmapAsync(BeatmapDownloadInfo info, finished_opt_function<std::filesystem::path> onFinished, std::function<void(float)> progressReport = nullptr);
+        for (auto& info : infos ) {
+            rl.AddRequest(CreateDownloadBeatmapRequest(info));
+        }
 
-        /// @brief download multiple beatmaps asynchronously, ratelimited to ~4 async requests.
-        /// @return map of the downloaded beatmaps' keys, if a download failed its corresponding path wont be set
-        BEATSAVER_PLUSPLUS_EXPORT std::future<std::unordered_map<std::string, std::optional<std::filesystem::path>>> DownloadBeatmapsAsync(std::span<BeatmapDownloadInfo const> infos, std::function<void(int, int)> progressReport = nullptr);
-
-        /// @brief download multiple beatmaps asynchronously, ratelimited to ~4 async requests.
-        BEATSAVER_PLUSPLUS_EXPORT void DownloadBeatmapsAsync(std::span<BeatmapDownloadInfo const> infos, finished_opt_function<std::unordered_map<std::string, std::optional<std::filesystem::path>>> onFinished, std::function<void(int, int)> progressReport = nullptr);
-
-        /// @brief get the preview sound from the provided beatmapversion
-        BEATSAVER_PLUSPLUS_EXPORT void GetPreviewAsync(Models::BeatmapVersion const& beatmap, finished_opt_function<std::vector<uint8_t>> onFinished);
-
-        /// @brief get the cover image data from the provided beatmapversion
-        BEATSAVER_PLUSPLUS_EXPORT void GetCoverImageAsync(Models::BeatmapVersion const& beatmap, finished_opt_function<std::vector<uint8_t>> onFinished);
-
-        /// @brief download a beatmap from the provided download info
-        /// @return output path where it was written to
-        BEATSAVER_PLUSPLUS_EXPORT std::optional<std::filesystem::path> DownloadBeatmap(BeatmapDownloadInfo downloadInfo, std::function<void(float)> progressReport = nullptr);
-
-        /// @brief download multiple beatmaps, ratelimited to ~4 async requests.
-        /// @return readonly span of the infos to use to download these maps
-        BEATSAVER_PLUSPLUS_EXPORT std::unordered_map<std::string, std::optional<std::filesystem::path>> DownloadBeatmaps(std::span<BeatmapDownloadInfo const> infos, std::function<void(int, int)> progressReport = nullptr);
-
-        /// @brief get the preview sound from the provided beatmapversion
-        BEATSAVER_PLUSPLUS_EXPORT std::optional<std::vector<uint8_t>> GetPreview(Models::BeatmapVersion const& beatmap);
-
-        /// @brief get the cover image data from the provided beatmapversion
-        BEATSAVER_PLUSPLUS_EXPORT std::optional<std::vector<uint8_t>> GetCoverImage(Models::BeatmapVersion const& beatmap);
+        rl.StartDispatchIfNeeded().wait();
+        if (progressReport) progressReport(total, completed);
+        return results;
     }
+
+    inline void DownloadBeatmapsAsync(std::span<BeatmapDownloadInfo const> infos, std::function<void(std::unordered_map<std::string, std::optional<std::filesystem::path>>)> onFinished, int maxConcurrency = 4, std::function<void(int, int)> progressReport = nullptr) {
+        if (!onFinished) return;
+
+        std::thread([](std::vector<BeatmapDownloadInfo const> infos, std::function<void(std::unordered_map<std::string, std::optional<std::filesystem::path>>)> onFinished, int maxConcurrency, std::function<void(int, int)> progressReport){
+            onFinished(DownloadBeatmaps(infos, maxConcurrency, progressReport));
+        }, std::vector(infos.begin(), infos.end()), onFinished, maxConcurrency, progressReport).detach();
+    }
+#pragma endregion // download
 }
+
+#define BEATSAVER_PLUSPLUS_GET(func, ...) BeatSaver::API::GetBeatsaverDownloader().Get<BeatSaver::API::BeatSaverResponse_t<&func>>(func(__VA_ARGS__))
+#define BEATSAVER_PLUSPLUS_GET_ASYNC(func, finished, ...) BeatSaver::API::GetBeatsaverDownloader().GetAsync<BeatSaver::API::BeatSaverResponse_t<&func>>(func(__VA_ARGS__), finished)
+#define BEATSAVER_PLUSPLUS_GET_FUTURE(func, ...) BeatSaver::API::GetBeatsaverDownloader().GetAsync<BeatSaver::API::BeatSaverResponse_t<&func>>(func(__VA_ARGS__))

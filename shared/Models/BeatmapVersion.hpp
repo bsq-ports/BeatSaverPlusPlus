@@ -9,16 +9,16 @@ namespace BeatSaver::Models {
 }
 
 SERDE_STRUCT(BeatSaver::Models, BeatmapVersion,
-    GETTER_FIELD(std::string, CreatedAt, "createdAt");
-    GETTER_FIELD_OPTIONAL(int, SageScore, "sageScore");
-    GETTER_FIELD(std::vector<BeatmapDifficulty>, Diffs, "diffs");
-    GETTER_FIELD_OPTIONAL(std::string, Feedback, "feedback");
-    GETTER_FIELD(std::string, Hash, "hash");
-    GETTER_FIELD_OPTIONAL(std::string, Key, "key");
-    GETTER_FIELD(std::string, State, "state"); // Enum with values Uploaded, Testplay, Published, Feedback
-    GETTER_FIELD(std::string, DownloadURL, "downloadURL");
-    GETTER_FIELD(std::string, CoverURL, "coverURL");
-    GETTER_FIELD(std::string, PreviewURL, "previewURL");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::string, CreatedAt, "createdAt");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD_OPTIONAL(int, SageScore, "sageScore");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::vector<BeatmapDifficulty>, Diffs, "diffs");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD_OPTIONAL(std::string, Feedback, "feedback");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::string, Hash, "hash");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD_OPTIONAL(std::string, Key, "key");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::string, State, "state"); // Enum with values Uploaded, Testplay, Published, Feedback
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::string, DownloadURL, "downloadURL");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::string, CoverURL, "coverURL");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::string, PreviewURL, "previewURL");
 
     public:
         std::optional<std::filesystem::path> DownloadBeatmap(Beatmap const& beatmap, std::function<void(float)> progressReport) const;

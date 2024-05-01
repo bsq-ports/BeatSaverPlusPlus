@@ -7,19 +7,22 @@
 #include "./Metadata.hpp"
 
 SERDE_STRUCT(BeatSaver::Models, Beatmap,
-    GETTER_FIELD(std::string, Id, "id");
-    GETTER_FIELD(std::string, Name, "name");
-    GETTER_FIELD(std::string, Description, "description");
-    GETTER_FIELD(UserDetail, Uploader, "uploader");
-    GETTER_FIELD(struct Metadata, Metadata, "metadata");
-    GETTER_FIELD(struct Stats, Stats, "stats");
-    GETTER_FIELD(std::string, Uploaded, "uploaded");
-    GETTER_FIELD(bool, Automapper, "automapper");
-    GETTER_FIELD(bool, Ranked, "ranked");
-    GETTER_FIELD(bool, Qualified, "qualified");
-    GETTER_FIELD(std::vector<BeatmapVersion>, Versions, "versions");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::string, Id, "id");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::string, Name, "name");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::string, Description, "description");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(UserDetail, Uploader, "uploader");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(struct Metadata, Metadata, "metadata");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(struct Stats, Stats, "stats");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::string, Uploaded, "uploaded");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(bool, Automapper, "automapper");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(bool, Ranked, "ranked");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(bool, Qualified, "qualified");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::vector<BeatmapVersion>, Versions, "versions");
 
     public:
+        std::string CreateFolderName(const BeatmapVersion& version) const { return fmt::format("{} ({} - {})", version.Key.value_or(Id), Metadata.SongName, Metadata.LevelAuthorName); }
+        std::string CreateFolderName() const { return CreateFolderName(Versions.front()); }
+
         std::optional<std::filesystem::path> DownloadLatestBeatmap(Beatmap const& beatmap, std::function<void(float)> progressReport) const {
             return Versions.front().DownloadBeatmap(*this, progressReport);
         }
