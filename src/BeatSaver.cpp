@@ -10,7 +10,11 @@
 #include <variant>
 
 namespace BeatSaver::API {
-    static const WebUtils::DownloaderUtility downloader{.userAgent=MOD_ID "/" VERSION " (+https://github.com/RedBrumbler/BeatSaverPlusPlus)"};
+    WebUtils::DownloaderUtility const& GetBeatsaverDownloader() {
+        static const WebUtils::DownloaderUtility downloader{.userAgent=MOD_ID "/" VERSION " (+https://github.com/RedBrumbler/BeatSaverPlusPlus)"};
+        return downloader;
+    }
+
     static std::filesystem::path _defaultOutputRoothPath = "/sdcard/ModData/com.beatgames.beatsaber/Mods/SongCore/CustomLevels";
 
     void Init(std::filesystem::path defaultOutputRootPath) {
@@ -21,12 +25,12 @@ namespace BeatSaver::API {
         return _defaultOutputRoothPath;
     }
 
-    std::future<bool> DownloadSongZipAsync(std::string url, std::filesystem::path outputPath, std::function<void(float)> progressReport) {
-        return std::async(std::launch::any, &DownloadSongZip, std::forward<std::string>(url), std::forward<std::filesystem::path>(outputPath), std::forward<std::function<void(float)>>(progressReport));
+    std::future<bool> DownloadSongZipAsync(WebUtils::URLOptions urlOptions, std::filesystem::path outputPath, std::function<void(float)> progressReport) {
+        return std::async(std::launch::any, &DownloadSongZip, std::forward<WebUtils::URLOptions>(urlOptions), std::forward<std::filesystem::path>(outputPath), std::forward<std::function<void(float)>>(progressReport));
     }
 
-    bool DownloadSongZip(std::string url, std::filesystem::path outputPath, std::function<void(float)> progressReport) {
-        auto data = downloader.Get<WebUtils::DataResponse>({url}, progressReport);
+    bool DownloadSongZip(WebUtils::URLOptions urlOptions, std::filesystem::path outputPath, std::function<void(float)> progressReport) {
+        auto data = GetBeatsaverDownloader().Get<WebUtils::DataResponse>(urlOptions, progressReport);
         if (!data.IsSuccessful() || !data.DataParsedSuccessful()) return false;
         auto& zipData = data.responseData.value();
 
@@ -51,7 +55,7 @@ namespace BeatSaver::API {
         return "";
     }
 
-    WebUtils::URLOptions::QueryMap Search::SearchQueryOptions::GetQueries() const {
+    WebUtils::URLOptions::QueryMap SearchQueryOptions::GetQueries() const {
         WebUtils::URLOptions::QueryMap queries;
         // from the docs: Options are a little weird, I may add another enum field in future to make this clearer. true = both, false = only ai, null = no ai
         switch (automapper) {
@@ -99,7 +103,7 @@ namespace BeatSaver::API {
         return queries;
     }
 
-    WebUtils::URLOptions::QueryMap Maps::LatestQueryOptions::GetQueries() const {
+    WebUtils::URLOptions::QueryMap LatestQueryOptions::GetQueries() const {
         WebUtils::URLOptions::QueryMap queries;
         // from the docs: Options are a little weird, I may add another enum field in future to make this clearer. true = both, false = only ai, null = no ai
         switch (automapper) {
@@ -128,7 +132,7 @@ namespace BeatSaver::API {
         return queries;
     }
 
-    WebUtils::URLOptions::QueryMap Maps::CollaborationQueryOptions::GetQueries() const {
+    WebUtils::URLOptions::QueryMap CollaborationQueryOptions::GetQueries() const {
         WebUtils::URLOptions::QueryMap queries;
 
         if (before.has_value()) queries["before"] = timestamp_string(before.value());
@@ -137,478 +141,69 @@ namespace BeatSaver::API {
         return queries;
     }
 
-    namespace Maps {
-        void GetBeatmapByKeyAsync(std::string key, finished_opt_function<Models::Beatmap> onFinished) {
-            if (!onFinished) return;
-
-            std::thread([](std::string key, finished_opt_function<Models::Beatmap> onFinished){
-                onFinished(GetBeatmapByKey(std::forward<std::string>(key)));
-            }, std::forward<std::string>(key), std::forward<finished_opt_function<Models::Beatmap>>(onFinished)).detach();
-        }
-
-        void GetBeatmapsByKeysAsync(std::span<std::string const> keys, finished_opt_function<std::unordered_map<std::string, Models::Beatmap>> onFinished) {
-            if (!onFinished) return;
-
-            std::thread([](std::vector<std::string> keys, finished_opt_function<std::unordered_map<std::string, Models::Beatmap>> onFinished){
-                onFinished(GetBeatmapsByKeys(keys));
-            },  std::vector<std::string>(keys.begin(), keys.end()), std::forward<finished_opt_function<std::unordered_map<std::string, Models::Beatmap>>>(onFinished)).detach();
-        }
-
-        void GetBeatmapByHashAsync(std::string hash, finished_opt_function<Models::Beatmap> onFinished) {
-            if (!onFinished) return;
-
-            std::thread([](std::string hash, finished_opt_function<Models::Beatmap> onFinished){
-                onFinished(GetBeatmapByHash(hash));
-            },  std::forward<std::string>(hash), std::forward<finished_opt_function<Models::Beatmap>>(onFinished)).detach();
-        }
-
-        void GetBeatmapsByUserAsync(int id, int page, finished_opt_function<Models::Page> onFinished) {
-            if (!onFinished) return;
-
-            std::thread([](int id, int page, finished_opt_function<Models::Page> onFinished){
-                onFinished(GetBeatmapsByUser(id, page));
-            },  id, page, std::forward<finished_opt_function<Models::Page>>(onFinished)).detach();
-        }
-
-        void GetCollaborationsByUserAsync(int id, finished_opt_function<Models::Page> onFinished, CollaborationQueryOptions queryOptions) {
-            if (!onFinished) return;
-
-            std::thread([](int id, finished_opt_function<Models::Page> onFinished, CollaborationQueryOptions queryOptions){
-                onFinished(GetCollaborationsByUser(id, queryOptions));
-            },  id, std::forward<finished_opt_function<Models::Page>>(onFinished), std::forward<CollaborationQueryOptions>(queryOptions)).detach();
-        }
-
-        void GetLatestAsync(finished_opt_function<Models::Page> onFinished, LatestQueryOptions queryOptions) {
-            if (!onFinished) return;
-
-            std::thread([](finished_opt_function<Models::Page> onFinished, LatestQueryOptions queryOptions){
-                onFinished(GetLatest(queryOptions));
-            }, std::forward<finished_opt_function<Models::Page>>(onFinished), std::forward<LatestQueryOptions>(queryOptions)).detach();
-        }
-
-        std::optional<Models::Beatmap> GetBeatmapByKey(std::string key) {
-            WebUtils::URLOptions urlOptions {
-                fmt::format(BEATSAVER_API_URL "/maps/id/{}", key)
-            };
-            try {
-                auto response = downloader.Get<BeatmapResponse>(urlOptions);
-                if (response.IsSuccessful() && response.DataParsedSuccessful()) {
-                    return response.responseData;
-                }
-
-                DEBUG("Response was unsuccesful (httpCode: {}, curlStatus: {}, parseSuccesful: {})", response.HttpCode, response.CurlStatus, response.DataParsedSuccessful());
-            } catch (JsonException const& e) {
-                ERROR("Json exception thrown during deserialization: {}", e.what());
-            }
-            return std::nullopt;
-        }
-
-        std::optional<std::unordered_map<std::string, Models::Beatmap>> GetBeatmapsByKeys(std::span<std::string const> keys) {
-            WebUtils::URLOptions urlOptions {
-                fmt::format(BEATSAVER_API_URL "/maps/ids/{}", fmt::join(keys.subspan(0, std::min<std::size_t>(keys.size(), 50)), ","))
-            };
-            try {
-                auto response = downloader.Get<WebUtils::JsonResponse>(urlOptions);
-                if (response.IsSuccessful() && response.DataParsedSuccessful()) {
-                    auto& json = response.responseData.value();
-                    ERROR_CHECK(json);
-
-                    std::unordered_map<std::string, Models::Beatmap> parsedResults;
-                    auto memberEnd = json.MemberEnd();
-                    for (auto itr = json.MemberBegin(); itr != memberEnd; itr++) {
-                        parsedResults.emplace(
-                            itr->name.Get<std::string>(),
-                            itr->value.Get<Models::Beatmap>()
-                        );
-                    }
-                    return parsedResults;
-                }
-
-                DEBUG("Response was unsuccesful (httpCode: {}, curlStatus: {}, parseSuccesful: {})", response.HttpCode, response.CurlStatus, response.DataParsedSuccessful());
-            } catch (JsonException const& e) {
-                ERROR("Json exception thrown during deserialization: {}", e.what());
-            }
-            return std::nullopt;
-        }
-
-        std::optional<Models::Beatmap> GetBeatmapByHash(std::string hash) {
-            WebUtils::URLOptions urlOptions {
-                fmt::format(BEATSAVER_API_URL "/maps/hash/{}", hash)
-            };
-
-            try {
-                auto response = downloader.Get<BeatmapResponse>(urlOptions);
-                if (response.IsSuccessful() && response.DataParsedSuccessful()) {
-                    return response.responseData;
-                }
-
-                DEBUG("Response was unsuccesful (httpCode: {}, curlStatus: {}, parseSuccesful: {})", response.HttpCode, response.CurlStatus, response.DataParsedSuccessful());
-            } catch (JsonException const& e) {
-                ERROR("Json exception thrown during deserialization: {}", e.what());
-            }
-
-            return std::nullopt;
-        }
-
-        std::optional<Models::Page> GetBeatmapsByUser(int id, int page) {
-            WebUtils::URLOptions urlOptions {
-                fmt::format(BEATSAVER_API_URL "/maps/uploader/{}/{}", id, page)
-            };
-
-            try {
-                auto response = downloader.Get<PageResponse>(urlOptions);
-                if (response.IsSuccessful() && response.DataParsedSuccessful()) {
-                    return response.responseData;
-                }
-
-                DEBUG("Response was unsuccesful (httpCode: {}, curlStatus: {}, parseSuccesful: {})", response.HttpCode, response.CurlStatus, response.DataParsedSuccessful());
-            } catch (JsonException const& e) {
-                ERROR("Json exception thrown during deserialization: {}", e.what());
-            }
-
-            return std::nullopt;
-        }
-
-        std::optional<Models::Page> GetCollaborationsByUser(int id, CollaborationQueryOptions queryOptions) {
-            WebUtils::URLOptions urlOptions {
-                fmt::format(BEATSAVER_API_URL "/maps/collaborations/{}", id),
-                queryOptions.GetQueries()
-            };
-
-            try {
-                auto response = downloader.Get<PageResponse>(urlOptions);
-                if (response.IsSuccessful() && response.DataParsedSuccessful()) {
-                    return response.responseData;
-                }
-
-                DEBUG("Response was unsuccesful (httpCode: {}, curlStatus: {}, parseSuccesful: {})", response.HttpCode, response.CurlStatus, response.DataParsedSuccessful());
-            } catch (JsonException const& e) {
-                ERROR("Json exception thrown during deserialization: {}", e.what());
-            }
-
-            return std::nullopt;
-        }
-
-        std::optional<Models::Page> GetLatest(LatestQueryOptions queryOptions) {
-            WebUtils::URLOptions urlOptions {
-                BEATSAVER_API_URL "/maps/latest",
-                queryOptions.GetQueries()
-            };
-
-            try {
-                auto response = downloader.Get<PageResponse>(urlOptions);
-                if (response.IsSuccessful() && response.DataParsedSuccessful()) {
-                    return response.responseData;
-                }
-
-                DEBUG("Response was unsuccesful (httpCode: {}, curlStatus: {}, parseSuccesful: {})", response.HttpCode, response.CurlStatus, response.DataParsedSuccessful());
-            } catch (JsonException const& e) {
-                ERROR("Json exception thrown during deserialization: {}", e.what());
-            }
-
-            return std::nullopt;
-        }
-    }
-
-    namespace Users {
-        void GetUserByIdAsync(int id, finished_opt_function<Models::UserDetail> onFinished) {
-            if (!onFinished) return;
-
-            std::thread([](int id, finished_opt_function<Models::UserDetail> onFinished){
-                onFinished(GetUserById(id));
-            }, id, std::forward<finished_opt_function<Models::UserDetail>>(onFinished)).detach();
-        }
-
-        void GetUsersByIdsAsync(std::span<int const> ids, finished_opt_function<std::unordered_map<int, Models::UserDetail>> onFinished) {
-            if (!onFinished) return;
-
-            std::thread([](std::vector<int> ids, finished_opt_function<std::unordered_map<int, Models::UserDetail>> onFinished){
-                onFinished(GetUsersByIds(ids));
-            }, std::vector<int>(ids.begin(), ids.end()), std::forward<finished_opt_function<std::unordered_map<int, Models::UserDetail>>>(onFinished)).detach();
-        }
-
-        void GetUserByNameAsync(std::string userName, finished_opt_function<Models::UserDetail> onFinished) {
-            if (!onFinished) return;
-
-            std::thread([](std::string userName, finished_opt_function<Models::UserDetail> onFinished){
-                onFinished(GetUserByName(userName));
-            }, std::forward<std::string>(userName), std::forward<finished_opt_function<Models::UserDetail>>(onFinished)).detach();
-        }
-
-        std::optional<Models::UserDetail> GetUserById(int id) {
-            WebUtils::URLOptions urlOptions {
-                fmt::format(BEATSAVER_API_URL "/users/id/{}", id)
-            };
-            try {
-                auto response = downloader.Get<UserDetailResponse>(urlOptions);
-                if (response.IsSuccessful() && response.DataParsedSuccessful()) {
-                    return response.responseData;
-                }
-
-                DEBUG("Response was unsuccesful (httpCode: {}, curlStatus: {}, parseSuccesful: {})", response.HttpCode, response.CurlStatus, response.DataParsedSuccessful());
-            } catch (JsonException const& e) {
-                ERROR("Json exception thrown during deserialization: {}", e.what());
-            }
-            return std::nullopt;
-        }
-
-        std::optional<std::unordered_map<int, Models::UserDetail>> GetUsersByIds(std::span<int const> ids) {
-            WebUtils::URLOptions urlOptions {
-                fmt::format(BEATSAVER_API_URL "/users/ids/{}", fmt::join(ids.subspan(0, std::min<std::size_t>(50, ids.size())), ","))
-            };
-            try {
-                auto response = downloader.Get<WebUtils::JsonResponse>(urlOptions);
-                if (response.IsSuccessful() && response.DataParsedSuccessful()) {
-                    auto& json = response.responseData.value();
-                    ERROR_CHECK(json);
-
-                    std::unordered_map<int, Models::UserDetail> parsedResults;
-                    for (auto& value : json.GetArray()) {
-                        auto detail = value.Get<Models::UserDetail>();
-                        parsedResults.emplace(
-                            detail.Id,
-                            detail
-                        );
-                    }
-                    return parsedResults;
-                }
-
-                DEBUG("Response was unsuccesful (httpCode: {}, curlStatus: {}, parseSuccesful: {})", response.HttpCode, response.CurlStatus, response.DataParsedSuccessful());
-            } catch (JsonException const& e) {
-                ERROR("Json exception thrown during deserialization: {}", e.what());
-            }
-            return std::nullopt;
-        }
-
-        std::optional<Models::UserDetail> GetUserByName(std::string userName) {
-            WebUtils::URLOptions urlOptions {
-                fmt::format(BEATSAVER_API_URL "/users/name/{}", userName)
-            };
-            try {
-                auto response = downloader.Get<UserDetailResponse>(urlOptions);
-                if (response.IsSuccessful() && response.DataParsedSuccessful()) {
-                    return response.responseData;
-                }
-
-                DEBUG("Response was unsuccesful (httpCode: {}, curlStatus: {}, parseSuccesful: {})", response.HttpCode, response.CurlStatus, response.DataParsedSuccessful());
-            } catch (JsonException const& e) {
-                ERROR("Json exception thrown during deserialization: {}", e.what());
-            }
-            return std::nullopt;
-        }
-    }
-
-    namespace Search {
-        void GetPageAsync(int page, finished_opt_function<Models::Page> onFinished, SearchQueryOptions queryOptions) {
-            if (!onFinished) return;
-
-            std::thread([](int page, finished_opt_function<Models::Page> onFinished, SearchQueryOptions queryOptions){
-                onFinished(GetPage(page, queryOptions));
-            }, page, std::forward<finished_opt_function<Models::Page>>(onFinished), std::forward<SearchQueryOptions>(queryOptions)).detach();
-        }
-
-        std::optional<Models::Page> GetPage(int page, SearchQueryOptions queryOptions) {
-            WebUtils::URLOptions urlOptions {
-                fmt::format(BEATSAVER_API_URL "/search/text/{}", page),
-                queryOptions.GetQueries()
-            };
-
-            try {
-                auto response = downloader.Get<PageResponse>(urlOptions);
-                if (response.IsSuccessful() && response.DataParsedSuccessful()) {
-                    return response.responseData;
-                }
-
-                DEBUG("Response was unsuccesful (httpCode: {}, curlStatus: {}, parseSuccesful: {})", response.HttpCode, response.CurlStatus, response.DataParsedSuccessful());
-            } catch (JsonException const& e) {
-                ERROR("Json exception thrown during deserialization: {}", e.what());
-            }
-
-            return std::nullopt;
-        }
-
-        std::span<const std::string> GetMapFeelTags() {
-            static std::string tags[] = {
-                "Accuracy",
-                "Balanced",
-                "Challenge",
-                "Dance",
-                "Fitness",
-                "Speed",
-                "Tech"
-            };
-            return tags;
-        }
-
-        std::span<const std::string> GetGenreTags() {
-            static std::string tags[] = {
-                "Alternative",
-                "Ambient",
-                "Anime",
-                "Classic & Orchestral",
-                "Comedy & Meme",
-                "Dance",
-                "Drum and Bass",
-                "Dubstep",
-                "Electronic",
-                "Folk & Acoustic",
-                "Funk & Disco",
-                "Hardcore",
-                "Hip Hop & Rap",
-                "Holiday",
-                "House",
-                "Indie",
-                "Instrumental",
-                "J-Pop",
-                "J-Rock",
-                "Jazz",
-                "K-Pop",
-                "Kids & Family",
-                "Metal",
-                "Nightcore",
-                "Pop",
-                "Punk",
-                "R&B",
-                "Rock",
-                "Soul",
-                "SpeedCore",
-                "Swing",
-                "TV & Film",
-                "Techno",
-                "Trance",
-                "Video Game",
-                "Vocaloid",
-            };
-            return tags;
-        }
-    }
-
-    namespace Download {
-        BeatmapDownloadInfo::BeatmapDownloadInfo(Models::Beatmap const& beatmap, Models::BeatmapVersion const& version) : Key(version.Key.value_or(beatmap.Id)), DownloadURL(version.DownloadURL), FolderName(fmt::format("{} ({} - {})", version.Key.value_or(beatmap.Id), beatmap.Metadata.SongName, beatmap.Metadata.LevelAuthorName)) {};
-
-        std::future<std::optional<std::filesystem::path>> DownloadBeatmapAsync(BeatmapDownloadInfo downloadInfo, std::function<void(float)> progressReport) {
-            return std::async(std::launch::any, &DownloadBeatmap, downloadInfo, progressReport);
-        }
-
-        void DownloadBeatmapAsync(BeatmapDownloadInfo downloadInfo, finished_opt_function<std::filesystem::path> onFinished, std::function<void(float)> progressReport) {
-            if (!onFinished) return;
-
-            std::thread([](BeatmapDownloadInfo downloadInfo, finished_opt_function<std::filesystem::path> onFinished, std::function<void(float)> progressReport){
-                onFinished(DownloadBeatmap(downloadInfo, progressReport));
-            }, std::forward<BeatmapDownloadInfo>(downloadInfo), std::forward<finished_opt_function<std::filesystem::path>>(onFinished), std::forward<std::function<void(float)>>(progressReport)).detach();
-        }
-
-        std::future<std::unordered_map<std::string, std::optional<std::filesystem::path>>> DownloadBeatmapsAsync(std::span<BeatmapDownloadInfo const> infos, std::function<void(int, int)> progressReport) {
-            static auto redirect = [](std::vector<BeatmapDownloadInfo> infos, std::function<void(int, int)> progressReport) {
-                return DownloadBeatmaps(infos, progressReport);
-            };
-            return std::async(std::launch::any, redirect, std::vector(infos.begin(), infos.end()), std::forward<std::function<void(int, int)>>(progressReport));
-        }
-
-        void DownloadBeatmapsAsync(std::span<BeatmapDownloadInfo const> infos, finished_opt_function<std::unordered_map<std::string, std::optional<std::filesystem::path>>> onFinished, std::function<void(int, int)> progressReport) {
-            if (!onFinished) return;
-
-            std::thread([](std::vector<BeatmapDownloadInfo> downloadInfos, finished_opt_function<std::unordered_map<std::string, std::optional<std::filesystem::path>>> onFinished, std::function<void(int, int)> progressReport){
-                onFinished(DownloadBeatmaps(downloadInfos, progressReport));
-            }, std::vector(infos.begin(), infos.end()), std::forward<finished_opt_function<std::unordered_map<std::string, std::optional<std::filesystem::path>>>>(onFinished), std::forward<std::function<void(int, int)>>(progressReport)).detach();
-        }
-
-        void GetPreviewAsync(Models::BeatmapVersion const& beatmap, finished_opt_function<std::vector<uint8_t>> onFinished) {
-            if (!onFinished) return;
-
-            std::thread([](std::string dataURL, finished_opt_function<std::vector<uint8_t>> onFinished){
-                onFinished(Utils::GetData(dataURL));
-            }, std::forward<std::string>(beatmap.PreviewURL), std::forward<finished_opt_function<std::vector<uint8_t>>>(onFinished)).detach();
-        }
-
-        void GetCoverImageAsync(Models::BeatmapVersion const& beatmap, finished_opt_function<std::vector<uint8_t>> onFinished) {
-            if (!onFinished) return;
-
-            std::thread([](std::string dataURL, finished_opt_function<std::vector<uint8_t>> onFinished){
-                onFinished(Utils::GetData(dataURL));
-            }, std::forward<std::string>(beatmap.CoverURL), std::forward<finished_opt_function<std::vector<uint8_t>>>(onFinished)).detach();
-        }
-
-        std::optional<std::filesystem::path> DownloadBeatmap(BeatmapDownloadInfo downloadInfo, std::function<void(float)> progressReport) {
-            auto targetPath = _defaultOutputRoothPath / Utils::ReplaceIllegalCharsInPath(downloadInfo.FolderName);
-
-            if (BeatSaver::API::DownloadSongZip(downloadInfo.DownloadURL, targetPath, progressReport)) {
-                return targetPath;
-            }
-
-            return std::nullopt;
-        }
-
-        struct BulkBeatmapDownloadRequest : public WebUtils::IRequest {
-            BulkBeatmapDownloadRequest(BeatmapDownloadInfo info) : url (info.DownloadURL), response(), info(info) {}
-            WebUtils::URLOptions url;
-            WebUtils::DataResponse response;
-            BeatmapDownloadInfo info;
-
-            virtual ~BulkBeatmapDownloadRequest() override = default;
-
-            virtual WebUtils::IResponse* get_TargetResponse() override { return &response; }
-            virtual WebUtils::IResponse const* get_TargetResponse() const override { return &response; }
-            virtual WebUtils::URLOptions const& get_URL() const override { return url; }
+    std::span<const std::string> GetMapFeelTags() {
+        static std::string tags[] = {
+            "Accuracy",
+            "Balanced",
+            "Challenge",
+            "Dance",
+            "Fitness",
+            "Speed",
+            "Tech"
         };
+        return tags;
+    }
 
-        std::unordered_map<std::string, std::optional<std::filesystem::path>> DownloadBeatmaps(std::span<BeatmapDownloadInfo const> infos, std::function<void(int, int)> progressReport) {
-            std::mutex resultMutex;
-            std::unordered_map<std::string, std::optional<std::filesystem::path>> results;
-            auto setKeyValue = [&resultMutex, &results](std::string key, std::optional<std::filesystem::path> value) {
-                std::unique_lock lock(resultMutex);
-                results[key] = value;
-            };
+    std::span<const std::string> GetGenreTags() {
+        static std::string tags[] = {
+            "Alternative",
+            "Ambient",
+            "Anime",
+            "Classic & Orchestral",
+            "Comedy & Meme",
+            "Dance",
+            "Drum and Bass",
+            "Dubstep",
+            "Electronic",
+            "Folk & Acoustic",
+            "Funk & Disco",
+            "Hardcore",
+            "Hip Hop & Rap",
+            "Holiday",
+            "House",
+            "Indie",
+            "Instrumental",
+            "J-Pop",
+            "J-Rock",
+            "Jazz",
+            "K-Pop",
+            "Kids & Family",
+            "Metal",
+            "Nightcore",
+            "Pop",
+            "Punk",
+            "R&B",
+            "Rock",
+            "Soul",
+            "SpeedCore",
+            "Swing",
+            "TV & Film",
+            "Techno",
+            "Trance",
+            "Video Game",
+            "Vocaloid",
+        };
+        return tags;
+    }
 
-            WebUtils::RatelimitedDispatcher rl;
-            rl.rateLimitTime = std::chrono::milliseconds(1000);
-            rl.maxConcurrentRequests = 4;
 
-            rl.downloader = downloader;
-            int total = infos.size();
-            std::atomic_int completed = 0;
-
-            // request finished handler
-            rl.onRequestFinished = [total, &completed, progressReport, &setKeyValue](bool success, WebUtils::IRequest* request) -> std::optional<WebUtils::RatelimitedDispatcher::RetryOptions> {
-                if (!success) return WebUtils::RatelimitedDispatcher::RetryOptions(std::chrono::milliseconds(50));
-                auto bulkReq = dynamic_cast<BulkBeatmapDownloadRequest*>(request);
-                if (!bulkReq) return std::nullopt;
-
-                auto& response = bulkReq->response;
-                auto& info = bulkReq->info;
-                setKeyValue(info.Key, std::nullopt);
-
-                if (response.IsSuccessful() && response.DataParsedSuccessful()) {
-                    auto outputPath = _defaultOutputRoothPath / Utils::ReplaceIllegalCharsInPath(info.FolderName);
-                    if (Utils::ExtractAll(response.responseData.value(), outputPath)) {
-                        setKeyValue(info.Key, outputPath);
-                    }
-
-                    completed++;
-                    if (progressReport != nullptr) progressReport(total, completed);
-                }
-                return std::nullopt;
-            };
-
-            // create all the requests we want to run
-            for (auto info : infos) {
-                auto req = std::make_unique<BulkBeatmapDownloadRequest>(info);
-                rl.AddRequest(std::move(req));
-            }
-
-            // start and wait for all requests to finish
-            rl.StartDispatchIfNeeded().wait();
-            // one last progress report after everything is completed
-            if (progressReport != nullptr) progressReport(total, completed);
-            return results;
+    bool DownloadBeatmapResponse::AcceptData(std::span<uint8_t const> data) {
+        auto basePath = GetDefaultOutputPath();
+        auto targetPath = basePath / Utils::ReplaceIllegalCharsInPath(info.FolderName);
+        if (Utils::ExtractAll(data, targetPath)) {
+            responseData = targetPath;
+            return true;
         }
-
-        std::optional<std::vector<uint8_t>> GetPreview(Models::BeatmapVersion const& beatmap) {
-            return Utils::GetData(beatmap.PreviewURL);
-        }
-
-        std::optional<std::vector<uint8_t>> GetCoverImage(Models::BeatmapVersion const& beatmap) {
-            return Utils::GetData(beatmap.CoverURL);
-        }
+        return false;
     }
 }

@@ -4,21 +4,21 @@
 #include "./BeatmapParitySummary.hpp"
 
 SERDE_STRUCT(BeatSaver::Models, BeatmapDifficulty,
-    GETTER_FIELD(float, NJS, "njs");
-    GETTER_FIELD(float, Offset, "offset");
-    GETTER_FIELD(int, Notes, "notes");
-    GETTER_FIELD(int, Bombs, "bombs");
-    GETTER_FIELD(int, Obstacles, "obstacles");
-    GETTER_FIELD(double, NPS, "nps");
-    GETTER_FIELD(double, Length, "length");
-    GETTER_FIELD(std::string, Characteristic, "characteristic");
-    GETTER_FIELD(std::string, Difficulty, "difficulty");
-    GETTER_FIELD(int, Events, "events");
-    GETTER_FIELD(bool, Chroma, "chroma");
-    GETTER_FIELD(bool, ME, "me");
-    GETTER_FIELD(bool, NE, "ne");
-    GETTER_FIELD(bool, Cinema, "cinema");
-    GETTER_FIELD(double, Seconds, "seconds");
-    GETTER_FIELD(BeatmapParitySummary, ParitySummary, "paritySummary");
-    GETTER_FIELD_OPTIONAL(float, Stars, "stars");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(float, NJS, "njs");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(float, Offset, "offset");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(int, Notes, "notes");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(int, Bombs, "bombs");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(int, Obstacles, "obstacles");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(double, NPS, "nps");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(double, Length, "length");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::string, Characteristic, "characteristic");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::string, Difficulty, "difficulty");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(int, Events, "events");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(bool, Chroma, "chroma");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(bool, ME, "me");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(bool, NE, "ne");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(bool, Cinema, "cinema");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(double, Seconds, "seconds");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(BeatmapParitySummary, ParitySummary, "paritySummary");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD_OPTIONAL(float, Stars, "stars");
 );

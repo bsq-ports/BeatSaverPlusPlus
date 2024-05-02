@@ -4,15 +4,15 @@
 
 namespace BeatSaver::Models {
     std::optional<std::filesystem::path> BeatmapVersion::DownloadBeatmap(Beatmap const& beatmap, std::function<void(float)> progressReport) const {
-        return BeatSaver::API::Download::DownloadBeatmap({beatmap, *this}, std::forward<std::function<void(float)>>(progressReport));
+        return BeatSaver::API::DownloadBeatmap({beatmap, *this}, std::forward<std::function<void(float)>>(progressReport));
     }
 
     std::future<std::optional<std::filesystem::path>> BeatmapVersion::DownloadBeatmapAsync(Beatmap const& beatmap, std::function<void(float)> progressReport) const {
-        return std::async(std::launch::any, BeatSaver::API::Download::DownloadBeatmap, BeatSaver::API::Download::BeatmapDownloadInfo{beatmap, *this}, std::forward<std::function<void(float)>>(progressReport));
+        return std::async(std::launch::any, BeatSaver::API::DownloadBeatmap, BeatSaver::API::BeatmapDownloadInfo{beatmap, *this}, std::forward<std::function<void(float)>>(progressReport));
     }
 
     void BeatmapVersion::DownloadBeatmapAsync(Beatmap const& beatmap, std::function<void(std::optional<std::filesystem::path>)> onFinished, std::function<void(float)> progressReport) const {
-        return BeatSaver::API::Download::DownloadBeatmapAsync({beatmap, *this}, onFinished, std::forward<std::function<void(float)>>(progressReport));
+        return BeatSaver::API::DownloadBeatmapAsync({beatmap, *this}, onFinished, std::forward<std::function<void(float)>>(progressReport));
     }
 
     std::optional<std::vector<uint8_t>> BeatmapVersion::GetCoverImage() const {

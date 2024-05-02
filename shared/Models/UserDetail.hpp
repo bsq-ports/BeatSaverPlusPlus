@@ -4,12 +4,12 @@
 #include "UserStats.hpp"
 
 SERDE_STRUCT(BeatSaver::Models, UserDetail,
-    GETTER_FIELD(int, Id, "id");
-    GETTER_FIELD(std::string, Username, "name");
-    GETTER_FIELD_OPTIONAL(std::string, Hash, "hash");
-    GETTER_FIELD(std::string, AvatarURL, "avatar");
-    GETTER_FIELD_OPTIONAL(bool, Testplay, "testplay");
-    GETTER_FIELD_OPTIONAL(UserStats, Stats, "stats");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(int, Id, "id");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::string, Username, "name");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD_OPTIONAL(std::string, Hash, "hash");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD(std::string, AvatarURL, "avatar");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD_OPTIONAL(bool, Testplay, "testplay");
+    BEATSAVER_PLUSPLUS_GETTER_FIELD_OPTIONAL(UserStats, Stats, "stats");
 
     public:
         void GetAvatarImageAsync(std::function<void(std::optional<std::vector<uint8_t>>)>) const;
