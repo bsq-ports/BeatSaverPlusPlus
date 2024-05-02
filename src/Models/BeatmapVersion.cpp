@@ -3,16 +3,16 @@
 #include "Utils.hpp"
 
 namespace BeatSaver::Models {
-    std::optional<std::filesystem::path> BeatmapVersion::DownloadBeatmap(Beatmap const& beatmap) const {
-        return BeatSaver::API::Download::DownloadBeatmap({beatmap, *this});
+    std::optional<std::filesystem::path> BeatmapVersion::DownloadBeatmap(Beatmap const& beatmap, std::function<void(float)> progressReport) const {
+        return BeatSaver::API::Download::DownloadBeatmap({beatmap, *this}, std::forward<std::function<void(float)>>(progressReport));
     }
 
-    std::future<std::optional<std::filesystem::path>> BeatmapVersion::DownloadBeatmapAsync(Beatmap const& beatmap) const {
-        return std::async(std::launch::any, BeatSaver::API::Download::DownloadBeatmap, BeatSaver::API::Download::BeatmapDownloadInfo{beatmap, *this});
+    std::future<std::optional<std::filesystem::path>> BeatmapVersion::DownloadBeatmapAsync(Beatmap const& beatmap, std::function<void(float)> progressReport) const {
+        return std::async(std::launch::any, BeatSaver::API::Download::DownloadBeatmap, BeatSaver::API::Download::BeatmapDownloadInfo{beatmap, *this}, std::forward<std::function<void(float)>>(progressReport));
     }
 
-    void BeatmapVersion::DownloadBeatmapAsync(Beatmap const& beatmap, std::function<void(std::optional<std::filesystem::path>)> onFinished) const {
-        return BeatSaver::API::Download::DownloadBeatmapAsync({beatmap, *this}, onFinished);
+    void BeatmapVersion::DownloadBeatmapAsync(Beatmap const& beatmap, std::function<void(std::optional<std::filesystem::path>)> onFinished, std::function<void(float)> progressReport) const {
+        return BeatSaver::API::Download::DownloadBeatmapAsync({beatmap, *this}, onFinished, std::forward<std::function<void(float)>>(progressReport));
     }
 
     std::optional<std::vector<uint8_t>> BeatmapVersion::GetCoverImage() const {

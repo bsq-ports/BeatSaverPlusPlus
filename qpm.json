@@ -41,7 +41,7 @@
     },
     {
       "id": "web-utils",
-      "versionRange": "^0.3.0",
+      "versionRange": "^0.5.0",
       "additionalData": {}
     },
     {

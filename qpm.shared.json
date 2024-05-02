@@ -42,7 +42,7 @@
       },
       {
         "id": "web-utils",
-        "versionRange": "^0.3.0",
+        "versionRange": "^0.5.0",
         "additionalData": {}
       },
       {
@@ -56,17 +56,17 @@
     {
       "dependency": {
         "id": "web-utils",
-        "versionRange": "=0.3.5",
+        "versionRange": "=0.5.0",
         "additionalData": {
-          "soLink": "https://github.com/RedBrumbler/WebUtils/releases/download/v0.3.5/libweb-utils.so",
-          "debugSoLink": "https://github.com/RedBrumbler/WebUtils/releases/download/v0.3.5/debug_libweb-utils.so",
+          "soLink": "https://github.com/RedBrumbler/WebUtils/releases/download/v0.5.0/libweb-utils.so",
+          "debugSoLink": "https://github.com/RedBrumbler/WebUtils/releases/download/v0.5.0/debug_libweb-utils.so",
           "overrideSoName": "libweb-utils.so",
-          "modLink": "https://github.com/RedBrumbler/WebUtils/releases/download/v0.3.5/WebUtils.qmod",
-          "branchName": "version/v0_3_5",
+          "modLink": "https://github.com/RedBrumbler/WebUtils/releases/download/v0.5.0/WebUtils.qmod",
+          "branchName": "version/v0_5_0",
           "cmake": false
         }
       },
-      "version": "0.3.5"
+      "version": "0.5.0"
     },
     {
       "dependency": {
@@ -104,12 +104,13 @@
     {
       "dependency": {
         "id": "libil2cpp",
-        "versionRange": "=0.3.1",
+        "versionRange": "=0.3.2",
         "additionalData": {
-          "headersOnly": true
+          "headersOnly": true,
+          "cmake": false
         }
       },
-      "version": "0.3.1"
+      "version": "0.3.2"
     },
     {
       "dependency": {

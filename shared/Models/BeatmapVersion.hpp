@@ -21,9 +21,9 @@ SERDE_STRUCT(BeatSaver::Models, BeatmapVersion,
     GETTER_FIELD(std::string, PreviewURL, "previewURL");
 
     public:
-        std::optional<std::filesystem::path> DownloadBeatmap(Beatmap const& beatmap) const;
-        std::future<std::optional<std::filesystem::path>> DownloadBeatmapAsync(Beatmap const& beatmap) const;
-        void DownloadBeatmapAsync(Beatmap const& beatmap, std::function<void(std::optional<std::filesystem::path>)> onFinished) const;
+        std::optional<std::filesystem::path> DownloadBeatmap(Beatmap const& beatmap, std::function<void(float)> progressReport) const;
+        std::future<std::optional<std::filesystem::path>> DownloadBeatmapAsync(Beatmap const& beatmap, std::function<void(float)> progressReport) const;
+        void DownloadBeatmapAsync(Beatmap const& beatmap, std::function<void(std::optional<std::filesystem::path>)> onFinished, std::function<void(float)> progressReport) const;
 
         std::optional<std::vector<uint8_t>> GetCoverImage() const;
         void GetCoverImageAsync(std::function<void(std::optional<std::vector<uint8_t>>)> onFinished) const;
