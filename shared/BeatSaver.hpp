@@ -38,16 +38,16 @@ namespace BeatSaver::API {
     BEATSAVER_PLUSPLUS_EXPORT std::filesystem::path GetDefaultOutputPath();
 
     /// @brief downloads a song zip from the url to a given path
-    /// @param url the url to download the file from
+    /// @param urlOptions the url options to download the file from
     /// @param outputPath the output directory, should not be CustomLevels, but the output path
     /// @return bool future success, if download failed or extraction of the file failed, false will return.
-    std::future<bool> BEATSAVER_PLUSPLUS_EXPORT DownloadSongZipAsync(std::string url, std::filesystem::path outputPath, std::function<void(float)> progressReport = nullptr);
+    std::future<bool> BEATSAVER_PLUSPLUS_EXPORT DownloadSongZipAsync(WebUtils::URLOptions urlOptions, std::filesystem::path outputPath, std::function<void(float)> progressReport = nullptr);
 
     /// @brief downloads a song zip from the url to a given path
-    /// @param url the url to download the file from
+    /// @param urlOptions the url options to download the file from
     /// @param outputPath the output directory, should not be CustomLevels, but the output path
     /// @return bool success, if download failed or extraction of the file failed, false will return.
-    bool BEATSAVER_PLUSPLUS_EXPORT DownloadSongZip(std::string url, std::filesystem::path outputPath, std::function<void(float)> progressReport = nullptr);
+    bool BEATSAVER_PLUSPLUS_EXPORT DownloadSongZip(WebUtils::URLOptions urlOptions, std::filesystem::path outputPath, std::function<void(float)> progressReport = nullptr);
 #pragma region responses
     BEATSAVER_PLUSPLUS_DECLARE_SIMPLE_RESPONSE_T(Models, Page);
     BEATSAVER_PLUSPLUS_DECLARE_SIMPLE_RESPONSE_T(Models, Beatmap);
@@ -564,9 +564,9 @@ namespace BeatSaver::API {
     inline void DownloadBeatmapsAsync(std::span<BeatmapDownloadInfo const> infos, std::function<void(std::unordered_map<std::string, std::optional<std::filesystem::path>>)> onFinished, int maxConcurrency = 4, std::function<void(int, int)> progressReport = nullptr) {
         if (!onFinished) return;
 
-        std::thread([](std::vector<BeatmapDownloadInfo const> infos, std::function<void(std::unordered_map<std::string, std::optional<std::filesystem::path>>)> onFinished, int maxConcurrency, std::function<void(int, int)> progressReport){
+        std::thread([](std::vector<BeatmapDownloadInfo> infos, std::function<void(std::unordered_map<std::string, std::optional<std::filesystem::path>>)> onFinished, int maxConcurrency, std::function<void(int, int)> progressReport){
             onFinished(DownloadBeatmaps(infos, maxConcurrency, progressReport));
-        }, std::vector(infos.begin(), infos.end()), onFinished, maxConcurrency, progressReport).detach();
+        }, std::vector(infos.begin(), infos.end()), std::forward<std::function<void(std::unordered_map<std::string, std::optional<std::filesystem::path>>)>>(onFinished), maxConcurrency, std::forward<std::function<void(int, int)>>(progressReport)).detach();
     }
 #pragma endregion // download
 }

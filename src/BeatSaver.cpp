@@ -25,8 +25,8 @@ namespace BeatSaver::API {
         return _defaultOutputRoothPath;
     }
 
-    std::future<bool> DownloadSongZipAsync(std::string url, std::filesystem::path outputPath, std::function<void(float)> progressReport) {
-        return std::async(std::launch::any, &DownloadSongZip, std::forward<std::string>(url), std::forward<std::filesystem::path>(outputPath), std::forward<std::function<void(float)>>(progressReport));
+    std::future<bool> DownloadSongZipAsync(WebUtils::URLOptions urlOptions, std::filesystem::path outputPath, std::function<void(float)> progressReport) {
+        return std::async(std::launch::any, &DownloadSongZip, std::forward<WebUtils::URLOptions>(urlOptions), std::forward<std::filesystem::path>(outputPath), std::forward<std::function<void(float)>>(progressReport));
     }
 
     bool DownloadSongZip(WebUtils::URLOptions urlOptions, std::filesystem::path outputPath, std::function<void(float)> progressReport) {
