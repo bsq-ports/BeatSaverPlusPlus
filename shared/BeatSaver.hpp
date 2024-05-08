@@ -4,10 +4,12 @@
 #include "./macros.hpp"
 #include "./Models/SearchPage.hpp"
 #include "./Models/UserDetail.hpp"
+#include "./Models/VoteSummary.hpp"
 
 #include "./Models/PlaylistPage.hpp"
 #include "./Models/PlaylistSearchPage.hpp"
 
+#include "BeatSaver.hpp"
 #include "web-utils/shared/DownloaderUtility.hpp"
 #include "web-utils/shared/RatelimitedDispatcher.hpp"
 
@@ -99,6 +101,62 @@ namespace BeatSaver::API {
             return true;
         }
     };
+
+    struct Verify {
+        std::optional<std::string> error;
+        bool success;
+    };
+
+    struct BEATSAVER_PLUSPLUS_EXPORT VerifyResponse : public WebUtils::GenericResponse<Verify> {
+        bool AcceptData(std::span<uint8_t const> data) override {
+            rapidjson::Document doc;
+            doc.Parse((char*)data.data(), data.size());
+            if (doc.HasParseError()) return false;
+            try {
+                Verify output;
+                auto memberEnd = doc.MemberEnd();
+                auto successItr = doc.FindMember("success");
+                if (successItr != memberEnd) {
+                    output.success = successItr->value.GetBool();
+                }
+
+                auto errorItr = doc.FindMember("error");
+                if (errorItr != doc.MemberEnd()) {
+                    output.error = errorItr->value.Get<std::string>();
+                }
+
+                responseData = std::move(output);
+            } catch (BeatSaver::JsonException const& e) {
+                responseData = std::nullopt;
+                return false;
+            }
+            return true;
+        }
+    };
+
+    using VoteResponse = VerifyResponse;
+
+    struct BEATSAVER_PLUSPLUS_EXPORT ListOfVoteSummaryResponse : public WebUtils::GenericResponse<std::vector<Models::VoteSummary>> {
+        bool AcceptData(std::span<uint8_t const> data) override {
+            rapidjson::Document doc;
+            doc.Parse((char*)data.data(), data.size());
+            if (doc.HasParseError()) return false;
+            try {
+                BEATSAVER_PLUSPLUS_ERROR_CHECK(doc);
+                std::vector<Models::VoteSummary> output;
+                for (auto& v : doc.GetArray()) {
+                    output.emplace_back(v.Get<Models::VoteSummary>());
+                }
+
+                responseData = std::move(output);
+            } catch (BeatSaver::JsonException const& e) {
+                responseData = std::nullopt;
+                return false;
+            }
+            return true;
+        }
+    };
+
 #pragma endregion // responses
 
     enum class BEATSAVER_PLUSPLUS_EXPORT Filter {
@@ -335,6 +393,40 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetAvatarImageURLOptions, WebUtils::DataResponse);
 
+    /// @brief enum to determine the platform to use for the request
+    enum class UserPlatform {
+        Oculus,
+        Steam
+    };
+
+    /// @brief struct containing auth information to use in certain requests
+    struct PlatformAuth {
+        /// @param platform the platform for which to verify with the user id
+        UserPlatform platform;
+        /// @param userId applicable user id
+        std::string userId;
+        /// @param proof userproof
+        std::string proof;
+
+        /// @brief serializes the struct as a json object
+        static rapidjson::Value& Serialize(PlatformAuth const& instance, rapidjson::Value& json, rapidjson::Value::AllocatorType& allocator);
+
+        /// @brief serializes the struct as a json string
+        std::string SerializeToString() const;
+    };
+
+    /// @brief creates the neccesary url options and data to post to the endpoint
+    /// @return pair of webutils url options and data to send with the post request, expects a return of BeatSaver::API::VerifyResponse
+    inline std::pair<WebUtils::URLOptions, std::string> PostVerifyURLOptionsAndData(PlatformAuth auth) {
+        return {
+            WebUtils::URLOptions {
+                BEATSAVER_API_URL "/users/verify",
+            },
+            auth.SerializeToString()
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(PostVerifyURLOptionsAndData, VerifyResponse);
 #pragma endregion // users
 
 #pragma region search
@@ -416,6 +508,46 @@ namespace BeatSaver::API {
     BEATSAVER_PLUSPLUS_EXPORT std::span<const std::string> GetGenreTags();
 
 #pragma endregion // search
+
+#pragma region vote
+    struct VoteQueryOptions {
+        /// @brief get vote information after this timestamp
+        std::optional<timestamp> since = std::nullopt;
+
+        WebUtils::URLOptions::QueryMap GetQueries() const;
+    };
+
+    /// @brief creates the necessary url options to get vote information from beatsaver
+    /// @param queryOptions misc query options for the request
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::ListOfVoteSummaryResponse
+    inline WebUtils::URLOptions GetVoteURLOptions(VoteQueryOptions queryOptions = {}) {
+        return WebUtils::URLOptions {
+            BEATSAVER_API_URL "/vote",
+            queryOptions.GetQueries()
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetVoteURLOptions, ListOfVoteSummaryResponse);
+
+    /// @brief creates the body data for a vote submission
+    std::string BEATSAVER_PLUSPLUS_EXPORT CreateVoteData(PlatformAuth auth, bool direction, std::string hash);
+
+    /// @brief creates the necessary url options to post vote information to beatsaver
+    /// @param auth the auth for the request
+    /// @param direction whether this is an up or down vote
+    /// @param hash the hash of the map to vote for
+    /// @return urloptions to use with webutils and data to send, expects a return of BeatSaver::API::VoteResponse
+    inline std::pair<WebUtils::URLOptions, std::string> PostVoteURLOptionsAndData(PlatformAuth auth, bool direction, std::string hash) {
+        return {
+            WebUtils::URLOptions {
+                BEATSAVER_API_URL "/vote"
+            },
+            CreateVoteData(auth, direction, hash)
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(PostVoteURLOptionsAndData, VoteResponse);
+#pragma endregion // vote
 
 #pragma region playlists
     enum class BEATSAVER_PLUSPLUS_EXPORT LatestPlaylistSortOrder {
