@@ -141,6 +141,47 @@ namespace BeatSaver::API {
         return queries;
     }
 
+    WebUtils::URLOptions::QueryMap LatestPlaylistsQueryOptions::GetQueries() const {
+        WebUtils::URLOptions::QueryMap queries;
+        if (after.has_value()) queries["after"] = timestamp_string(after.value());
+        if (before.has_value()) queries["before"] = timestamp_string(before.value());
+        if (pageSize.has_value()) queries["pageSize"] = std::to_string(pageSize.value());
+
+        if (sort.has_value()) {
+            switch (sort.value()) {
+                using enum LatestPlaylistSortOrder;
+                case Updated:       queries["sort"] = "UPDATED"; break;
+                case SongsUpdated:  queries["sort"] = "SONGS_UPDATED"; break;
+                case Created:       queries["sort"] = "CREATED"; break;
+                case Curated:       queries["sort"] = "CURATED"; break;
+            }
+        }
+
+        return queries;
+    }
+
+    WebUtils::URLOptions::QueryMap SearchPlaylistsQueryOptions::GetQueries() const {
+        WebUtils::URLOptions::QueryMap queries;
+        if (query.has_value()) queries["q"] = query.value();
+        switch (sortOrder) {
+            using enum SearchPlaylistSortOrder;
+            case Latest:    queries["sortOrder"] = "Latest"; break;
+            case Relevance: queries["sortOrder"] = "Relevance"; break;
+            case Rating:    queries["sortOrder"] = "Rating"; break;
+            case Curated:   queries["sortOrder"] = "Curated"; break;
+        }
+
+        if (curated != Filter::Ignore) queries["curated"] = std::to_string(curated == Filter::Include);
+        if (verified != Filter::Ignore) queries["verified"] = std::to_string(verified == Filter::Include);
+        if (includeEmpty.has_value()) queries["includeEmpty"] = std::to_string(includeEmpty.value());
+        if (from.has_value()) queries["from"] = timestamp_string(from.value());
+        if (to.has_value()) queries["to"] = timestamp_string(to.value());
+        if (maxNps.has_value()) queries["maxNps"] = std::to_string(maxNps.value());
+        if (minNps.has_value()) queries["minNps"] = std::to_string(minNps.value());
+
+        return queries;
+    }
+
     std::span<const std::string> GetMapFeelTags() {
         static std::string tags[] = {
             "Accuracy",
