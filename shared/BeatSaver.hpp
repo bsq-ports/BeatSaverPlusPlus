@@ -2,10 +2,12 @@
 
 #include "./_config.h"
 #include "./macros.hpp"
-#include "./Models/Page.hpp"
+#include "./Models/SearchPage.hpp"
 #include "./Models/UserDetail.hpp"
 
-#include "BeatSaver.hpp"
+#include "./Models/PlaylistPage.hpp"
+#include "./Models/PlaylistSearchPage.hpp"
+
 #include "web-utils/shared/DownloaderUtility.hpp"
 #include "web-utils/shared/RatelimitedDispatcher.hpp"
 
@@ -49,9 +51,11 @@ namespace BeatSaver::API {
     /// @return bool success, if download failed or extraction of the file failed, false will return.
     bool BEATSAVER_PLUSPLUS_EXPORT DownloadSongZip(WebUtils::URLOptions urlOptions, std::filesystem::path outputPath, std::function<void(float)> progressReport = nullptr);
 #pragma region responses
-    BEATSAVER_PLUSPLUS_DECLARE_SIMPLE_RESPONSE_T(Models, Page);
+    BEATSAVER_PLUSPLUS_DECLARE_SIMPLE_RESPONSE_T(Models, SearchPage);
     BEATSAVER_PLUSPLUS_DECLARE_SIMPLE_RESPONSE_T(Models, Beatmap);
     BEATSAVER_PLUSPLUS_DECLARE_SIMPLE_RESPONSE_T(Models, UserDetail);
+    BEATSAVER_PLUSPLUS_DECLARE_SIMPLE_RESPONSE_T(Models, PlaylistSearchPage);
+    BEATSAVER_PLUSPLUS_DECLARE_SIMPLE_RESPONSE_T(Models, PlaylistPage);
 
     struct BEATSAVER_PLUSPLUS_EXPORT BeatmapMapResponse : public WebUtils::GenericResponse<std::unordered_map<std::string, Models::Beatmap>> {
         bool AcceptData(std::span<uint8_t const> data) override {
@@ -98,9 +102,12 @@ namespace BeatSaver::API {
 #pragma endregion // responses
 
     enum class BEATSAVER_PLUSPLUS_EXPORT Filter {
-        Ignore, // ignore this filter
-        Include, // include maps with this
-        Exclude, // exclude maps with this
+        /// @brief ignore this filter, meaning you get both with & without
+        Ignore,
+        /// @brief include this filter, meaning you only get with
+        Include,
+        /// @brief exclude this filter, meaning you only get without
+        Exclude,
     };
 
     using timestamp = std::variant<std::string, std::chrono::time_point<std::chrono::system_clock>>;
@@ -225,19 +232,19 @@ namespace BeatSaver::API {
     /// @brief creates the necessary url options to get a page of maps by the given uploader
     /// @param id the user id to get a page for
     /// @param page the page to get levels for
-    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::PageResponse
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::SearchPageResponse
     inline WebUtils::URLOptions GetBeatmapsByUserURLOptions(int id, int page = 0) {
         return WebUtils::URLOptions{
             fmt::format(BEATSAVER_API_URL "/maps/uploader/{}/{}", id, page)
         };
     }
 
-    DECLARE_BEATSAVER_RESPONSE_T(GetBeatmapsByUserURLOptions, PageResponse);
+    DECLARE_BEATSAVER_RESPONSE_T(GetBeatmapsByUserURLOptions, SearchPageResponse);
 
     /// @brief creates the necessary url options to get a page of collaborations by the given uploader
     /// @param id the user id to get a page for
     /// @param queryOptions misc query options
-    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::PageResponse
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::SearchPageResponse
     inline WebUtils::URLOptions GetCollaborationsByUserURLOptions(int id, CollaborationQueryOptions queryOptions = {}) {
         return WebUtils::URLOptions{
             fmt::format(BEATSAVER_API_URL "/maps/uploader/{}", id),
@@ -245,12 +252,12 @@ namespace BeatSaver::API {
         };
     }
 
-    DECLARE_BEATSAVER_RESPONSE_T(GetCollaborationsByUserURLOptions, PageResponse);
+    DECLARE_BEATSAVER_RESPONSE_T(GetCollaborationsByUserURLOptions, SearchPageResponse);
 
     /// @brief creates the necessary url options to get a page of the latest maps on beatsaver
     /// @param id the user id to get a page for
     /// @param queryOptions misc query options
-    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::PageResponse
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::SearchPageResponse
     inline WebUtils::URLOptions GetLatestURLOptions(LatestQueryOptions queryOptions = {}) {
         return WebUtils::URLOptions{
             fmt::format(BEATSAVER_API_URL "/maps/latest"),
@@ -258,18 +265,18 @@ namespace BeatSaver::API {
         };
     }
 
-    DECLARE_BEATSAVER_RESPONSE_T(GetLatestURLOptions, PageResponse);
+    DECLARE_BEATSAVER_RESPONSE_T(GetLatestURLOptions, SearchPageResponse);
 
     /// @brief creates the necessary url options to get a page of maps on beatsaver ordered by plays
     /// @param page the page to get
-    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::PageResponse
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::SearchPageResponse
     inline WebUtils::URLOptions GetPlaysURLOptions(int page = 0) {
         return WebUtils::URLOptions{
             fmt::format(BEATSAVER_API_URL "/maps/plays/{}", page)
         };
     }
 
-    DECLARE_BEATSAVER_RESPONSE_T(GetPlaysURLOptions, PageResponse);
+    DECLARE_BEATSAVER_RESPONSE_T(GetPlaysURLOptions, SearchPageResponse);
 
 #pragma endregion // maps
 
@@ -392,7 +399,7 @@ namespace BeatSaver::API {
     /// @brief creates the necessary url options to search for maps
     /// @param page the page to go to for the result
     /// @param queryOptions misc query options for the search
-    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::PageResponse
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::SearchPageResponse
     inline WebUtils::URLOptions GetPageURLOptions(int page, SearchQueryOptions queryOptions = {}) {
         return WebUtils::URLOptions {
             fmt::format(BEATSAVER_API_URL "/search/text/{}", page),
@@ -400,7 +407,7 @@ namespace BeatSaver::API {
         };
     }
 
-    DECLARE_BEATSAVER_RESPONSE_T(GetPageURLOptions, PageResponse);
+    DECLARE_BEATSAVER_RESPONSE_T(GetPageURLOptions, SearchPageResponse);
 
     /// @brief provides a readonly span of some map feel tags that are available on beatsaver. these tags were pulled at a moment in time and are not guaranteed to still exist
     BEATSAVER_PLUSPLUS_EXPORT std::span<const std::string> GetMapFeelTags();
@@ -409,6 +416,94 @@ namespace BeatSaver::API {
     BEATSAVER_PLUSPLUS_EXPORT std::span<const std::string> GetGenreTags();
 
 #pragma endregion // search
+
+#pragma region playlists
+    enum class BEATSAVER_PLUSPLUS_EXPORT LatestPlaylistSortOrder {
+        Updated,
+        SongsUpdated,
+        Created,
+        Curated
+    };
+
+    /// @brief Query options for latest playlist retrieval
+    struct BEATSAVER_PLUSPLUS_EXPORT LatestPlaylistsQueryOptions {
+        /// @brief filter for playlists after this timestamp
+        std::optional<timestamp> after = std::nullopt;
+        /// @brief filter for playlists before this timestamp
+        std::optional<timestamp> before = std::nullopt;
+        /// @brief change the amount of responses
+        std::optional<int> pageSize = std::nullopt;
+        /// @brief which sorting mode to use
+        std::optional<LatestPlaylistSortOrder> sort = std::nullopt;
+
+        WebUtils::URLOptions::QueryMap GetQueries() const;
+    };
+
+    inline WebUtils::URLOptions GetLatestPlaylistsURLOptions(LatestPlaylistsQueryOptions queryOptions = {}) {
+        return WebUtils::URLOptions {
+            fmt::format(BEATSAVER_API_URL "/playlists/latest"),
+            queryOptions.GetQueries()
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetLatestPlaylistsURLOptions, PlaylistSearchPageResponse);
+
+    enum class SearchPlaylistSortOrder {
+        Latest,
+        Relevance,
+        Rating,
+        Curated
+    };
+
+    /// @brief Query options for playlist searches
+    struct SearchPlaylistsQueryOptions {
+        /// @brief query to filter with
+        std::optional<std::string> query = std::nullopt;
+        /// @brief sorting order for the search
+        SearchPlaylistSortOrder sortOrder = SearchPlaylistSortOrder::Latest;
+        /// @brief whether to include curated maps in the results
+        Filter curated = Filter::Ignore;
+        /// @brief whether to include maps by verified users in the results
+        Filter verified = Filter::Ignore;
+        /// @brief whether to include empty playlists in the results
+        std::optional<bool> includeEmpty = std::nullopt;
+        /// @brief filter for playlists after this timestamp
+        std::optional<timestamp> from = std::nullopt;
+        /// @brief filter for playlists before this timestamp
+        std::optional<timestamp> to = std::nullopt;
+        /// @brief require a max nps to be filtered on
+        std::optional<float> maxNps = std::nullopt;
+        /// @brief require a min nps to be filtered on
+        std::optional<float> minNps = std::nullopt;
+
+        WebUtils::URLOptions::QueryMap GetQueries() const;
+    };
+
+    inline WebUtils::URLOptions GetSearchPlaylistsURLOptions(int page = 0, SearchPlaylistsQueryOptions queryOptions = {}) {
+        return WebUtils::URLOptions {
+            fmt::format(BEATSAVER_API_URL "/playlists/search/{}", page),
+            queryOptions.GetQueries()
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetSearchPlaylistsURLOptions, PlaylistSearchPageResponse);
+
+    inline WebUtils::URLOptions GetUserPlaylistsURLOptions(int userID, int page = 0) {
+        return WebUtils::URLOptions {
+            fmt::format(BEATSAVER_API_URL "/playlists/user/{}/{}", userID, page)
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetUserPlaylistsURLOptions, PlaylistSearchPageResponse);
+
+    inline WebUtils::URLOptions GetPlaylistURLOptions(int playlistID, int page = 0) {
+        return WebUtils::URLOptions {
+            fmt::format(BEATSAVER_API_URL "/playlists/id/{}/{}", playlistID, page)
+        };
+    }
+
+    DECLARE_BEATSAVER_RESPONSE_T(GetPlaylistURLOptions, PlaylistPageResponse);
+#pragma endregion // playlists
 
 #pragma region download
     /// @brief helper struct containing the information for a map download
