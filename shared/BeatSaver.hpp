@@ -571,6 +571,9 @@ namespace BeatSaver::API {
         WebUtils::URLOptions::QueryMap GetQueries() const;
     };
 
+    /// @brief creates the necessary url options to browse the latest playlists
+    /// @param queryOptions misc query options for the request
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::PlaylistSearchPageResponse
     inline WebUtils::URLOptions GetLatestPlaylistsURLOptions(LatestPlaylistsQueryOptions queryOptions = {}) {
         return WebUtils::URLOptions {
             fmt::format(BEATSAVER_API_URL "/playlists/latest"),
@@ -611,6 +614,10 @@ namespace BeatSaver::API {
         WebUtils::URLOptions::QueryMap GetQueries() const;
     };
 
+    /// @brief creates the necessary url options to search in playlists
+    /// @param page page to get
+    /// @param queryOptions misc query options for the request
+    /// @return urloptions to use with webutils, expects a return of BeatSaver::API::PlaylistSearchPageResponse
     inline WebUtils::URLOptions GetSearchPlaylistsURLOptions(int page = 0, SearchPlaylistsQueryOptions queryOptions = {}) {
         return WebUtils::URLOptions {
             fmt::format(BEATSAVER_API_URL "/playlists/search/{}", page),
@@ -620,6 +627,10 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetSearchPlaylistsURLOptions, PlaylistSearchPageResponse);
 
+    /// @brief creates the necessary url options to get the playlists for a certain user
+    /// @param userID the user to get playlists for
+    /// @param page the page to get
+    /// @return urloptions to use with webutils and data to send, expects a return of BeatSaver::API::PlaylistSearchPageResponse
     inline WebUtils::URLOptions GetUserPlaylistsURLOptions(int userID, int page = 0) {
         return WebUtils::URLOptions {
             fmt::format(BEATSAVER_API_URL "/playlists/user/{}/{}", userID, page)
@@ -628,6 +639,10 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetUserPlaylistsURLOptions, PlaylistSearchPageResponse);
 
+    /// @brief creates the necessary url options to get the info for a specific playlist
+    /// @param playlistID the id of the playlist
+    /// @param page the page of beatmaps to get from the playlist info
+    /// @return urloptions to use with webutils and data to send, expects a return of BeatSaver::API::PlaylistPageResponse
     inline WebUtils::URLOptions GetPlaylistURLOptions(int playlistID, int page = 0) {
         return WebUtils::URLOptions {
             fmt::format(BEATSAVER_API_URL "/playlists/id/{}/{}", playlistID, page)
