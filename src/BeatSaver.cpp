@@ -182,6 +182,64 @@ namespace BeatSaver::API {
         return queries;
     }
 
+    WebUtils::URLOptions::QueryMap VoteQueryOptions::GetQueries() const {
+        WebUtils::URLOptions::QueryMap queries;
+
+        if (since.has_value()) queries["since"] = timestamp_string(since.value());
+
+        return queries;
+    }
+
+    rapidjson::Value& PlatformAuth::Serialize(PlatformAuth const& instance, rapidjson::Value& json, rapidjson::Value::AllocatorType& allocator) {
+        switch (instance.platform) {
+            using enum UserPlatform;
+            case Oculus: {
+                json.AddMember("oculusId", rapidjson::Value(instance.userId, allocator), allocator);
+                json.AddMember("steamId", rapidjson::Value("", allocator), allocator);
+            } break;
+            case Steam: {
+                json.AddMember("steamId", rapidjson::Value(instance.userId, allocator), allocator);
+                json.AddMember("oculusId", rapidjson::Value("", allocator), allocator);
+            } break;
+        }
+
+        json.AddMember("proof", rapidjson::Value(instance.proof, allocator), allocator);
+
+        return json;
+    }
+
+    std::string PlatformAuth::SerializeToString() const {
+        rapidjson::Document doc;
+        doc.SetObject();
+
+        Serialize(*this, doc, doc.GetAllocator());
+
+        rapidjson::StringBuffer buf;
+        rapidjson::Writer writer(buf);
+        doc.Accept(writer);
+
+        return {buf.GetString(), buf.GetLength()};
+    }
+
+    std::string BEATSAVER_PLUSPLUS_EXPORT CreateVoteData(PlatformAuth auth, bool direction, std::string hash) {
+        rapidjson::Document doc;
+        doc.SetObject();
+        auto& allocator = doc.GetAllocator();
+
+        rapidjson::Value authVal;
+        PlatformAuth::Serialize(auth, authVal, allocator);
+
+        doc.AddMember("auth", authVal, allocator);
+        doc.AddMember("direction", direction, allocator);
+        doc.AddMember("hash", rapidjson::StringRef(hash), allocator);
+
+        rapidjson::StringBuffer buf;
+        rapidjson::Writer writer(buf);
+        doc.Accept(writer);
+
+        return {buf.GetString(), buf.GetLength()};
+    }
+
     std::span<const std::string> GetMapFeelTags() {
         static std::string tags[] = {
             "Accuracy",
