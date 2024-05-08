@@ -194,16 +194,16 @@ namespace BeatSaver::API {
         switch (instance.platform) {
             using enum UserPlatform;
             case Oculus: {
-                json["oculusId"] = instance.userId;
-                json["steamId"] = "";
+                json.AddMember("oculusId", rapidjson::Value(instance.userId, allocator), allocator);
+                json.AddMember("steamId", rapidjson::Value("", allocator), allocator);
             } break;
             case Steam: {
-                json["steamId"] = instance.userId;
-                json["oculusId"] = "";
+                json.AddMember("steamId", rapidjson::Value(instance.userId, allocator), allocator);
+                json.AddMember("oculusId", rapidjson::Value("", allocator), allocator);
             } break;
         }
 
-        json["proof"] = instance.proof;
+        json.AddMember("proof", rapidjson::Value(instance.proof, allocator), allocator);
 
         return json;
     }
@@ -229,9 +229,9 @@ namespace BeatSaver::API {
         rapidjson::Value authVal;
         PlatformAuth::Serialize(auth, authVal, allocator);
 
-        doc["auth"] = authVal;
-        doc["direction"] = direction;
-        doc["hash"] = hash;
+        doc.AddMember("auth", authVal, allocator);
+        doc.AddMember("direction", direction, allocator);
+        doc.AddMember("hash", rapidjson::StringRef(hash), allocator);
 
         rapidjson::StringBuffer buf;
         rapidjson::Writer writer(buf);
