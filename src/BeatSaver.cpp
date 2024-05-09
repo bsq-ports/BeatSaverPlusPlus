@@ -191,6 +191,7 @@ namespace BeatSaver::API {
     }
 
     rapidjson::Value& PlatformAuth::Serialize(PlatformAuth const& instance, rapidjson::Value& json, rapidjson::Value::AllocatorType& allocator) {
+        json.SetObject();
         switch (instance.platform) {
             using enum UserPlatform;
             case Oculus: {
