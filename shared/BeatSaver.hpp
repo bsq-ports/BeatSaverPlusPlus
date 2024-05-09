@@ -422,7 +422,7 @@ namespace BeatSaver::API {
             WebUtils::URLOptions {
                 BEATSAVER_API_URL "/users/verify",
                 WebUtils::URLOptions::QueryMap{},
-                WebUtils::URLOptions::HeaderMap{"Content-Type", "application/json"},
+                WebUtils::URLOptions::HeaderMap{{"Content-Type", "application/json"}},
                 true
             },
             auth.SerializeToString()
@@ -545,7 +545,7 @@ namespace BeatSaver::API {
             WebUtils::URLOptions {
                 BEATSAVER_API_URL "/vote",
                 WebUtils::URLOptions::QueryMap{},
-                WebUtils::URLOptions::HeaderMap{"Content-Type", "application/json"},
+                WebUtils::URLOptions::HeaderMap{{"Content-Type", "application/json"}},
                 true
             },
             CreateVoteData(auth, direction, hash)
