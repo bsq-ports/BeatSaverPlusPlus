@@ -196,11 +196,11 @@ namespace BeatSaver::API {
             using enum UserPlatform;
             case Oculus: {
                 json.AddMember("oculusId", rapidjson::Value(instance.userId, allocator), allocator);
-                json.AddMember("steamId", rapidjson::Value("", allocator), allocator);
+                json.AddMember("steamId", rapidjson::Value(), allocator);
             } break;
             case Steam: {
                 json.AddMember("steamId", rapidjson::Value(instance.userId, allocator), allocator);
-                json.AddMember("oculusId", rapidjson::Value("", allocator), allocator);
+                json.AddMember("oculusId", rapidjson::Value(), allocator);
             } break;
         }
 
