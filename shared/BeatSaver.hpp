@@ -733,9 +733,9 @@ namespace BeatSaver::API {
     inline void DownloadBeatmapAsync(BeatmapDownloadInfo info, finished_opt_function<std::filesystem::path> onFinished, std::function<void(float)> progressReport = nullptr) {
         if (!onFinished) return;
 
-        std::thread([](BeatmapDownloadInfo info, finished_opt_function<std::filesystem::path> onFinished){
-            onFinished(DownloadBeatmap(info));
-        }, std::forward<BeatmapDownloadInfo>(info), std::forward<finished_opt_function<std::filesystem::path>>(onFinished)).detach();
+        std::thread([](BeatmapDownloadInfo info, finished_opt_function<std::filesystem::path> onFinished, std::function<void(float)> progressReport){
+            onFinished(DownloadBeatmap(info, progressReport));
+        }, std::forward<BeatmapDownloadInfo>(info), std::forward<finished_opt_function<std::filesystem::path>>(onFinished), std::forward<std::function<void(float)>>(progressReport)).detach();
     }
 
     /// @brief creates the necessary url options to download cover image data
