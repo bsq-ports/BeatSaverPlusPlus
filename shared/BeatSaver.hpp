@@ -780,7 +780,19 @@ namespace BeatSaver::API {
         std::atomic_int completed = 0;
 
         rl.onRequestFinished = [setKeyValue, &progressReport, total, &completed](bool success, auto req) -> std::optional<WebUtils::RatelimitedDispatcher::RetryOptions> {
-            if (!success) return WebUtils::RatelimitedDispatcher::RetryOptions{std::chrono::milliseconds(50) };
+            if (!success) {
+                auto targetResponse = req->TargetResponse;
+
+                auto http = targetResponse->HttpCode;
+                auto curl = targetResponse->CurlStatus;
+                if (curl == 0 && (http < 200 || http >= 300)) {
+                    // http codes other than 2xx we want no retries
+                    return std::nullopt;
+                }
+
+                return WebUtils::RatelimitedDispatcher::RetryOptions{std::chrono::milliseconds(50)};
+            }
+
             completed++;
 
             auto beatmapReq = dynamic_cast<DownloadBeatmapRequest*>(req);
