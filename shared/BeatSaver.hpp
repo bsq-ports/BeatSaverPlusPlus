@@ -245,15 +245,6 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetBeatmapsByKeysURLOptions, BeatmapMapResponse);
 
-    /// @brief creates the necessary url options to download multiple beatmaps infos with the provided keys
-    /// @param keys the keys to get the beatmap infos for
-    /// @return urloptions to use with webutils, expects a return of map<std::string (key), BeatSaver::API::BeatmapResponse>
-    template<typename T>
-    requires(std::is_constructible_v<T, std::span<std::string const>> && !std::is_same_v<T, std::span<std::string const>>)
-    inline WebUtils::URLOptions GetBeatmapsByKeysURLOptions(T keys) {
-        return GetBeatmapsByKeysURLOptions(std::span<std::string const>(keys));
-    }
-
     /// @brief creates the necessary url options to download a beatmap info with the provided hash
     /// @param hash the hash to get the info for
     /// @return urloptions to use with webutils, expects a return of BeatSaver::API::BeatmapResponse
@@ -277,15 +268,6 @@ namespace BeatSaver::API {
     }
 
     DECLARE_BEATSAVER_RESPONSE_T(GetBeatmapsByHashesURLOptions, BeatmapMapResponse);
-
-    /// @brief creates the necessary url options to download multiple beatmaps infos with the provided hashes
-    /// @param hashes span of hashes to get the beatmap infos for
-    /// @return urloptions to use with webutils, expects a return of map<std::string (hash), BeatSaver::API::BeatmapResponse>
-    template<typename T>
-    requires(std::is_constructible_v<T, std::span<std::string const>> && !std::is_same_v<T, std::span<std::string const>>)
-    inline WebUtils::URLOptions GetBeatmapsByHashesURLOptions(T hashes) {
-        return GetBeatmapsByHashesURLOptions(std::span<std::string const>(hashes));
-    }
 
     /// @brief creates the necessary url options to get a page of maps by the given uploader
     /// @param id the user id to get a page for
@@ -361,15 +343,6 @@ namespace BeatSaver::API {
     }
 
     DECLARE_BEATSAVER_RESPONSE_T(GetUsersByIdsURLOptions, UserDetailArrayResponse);
-
-    /// @brief creates the necessary url options to get multiple users details in one request
-    /// @param ids the user ids to get the details for
-    /// @return urloptions to use with webutils, expects a return of array<BeatSaver::API::UserDetailResponse>
-    template<typename T>
-    requires(std::is_constructible_v<T, std::span<int const>> && !std::is_same_v<T, std::span<int const>>)
-    inline WebUtils::URLOptions GetUsersByIdsURLOptions(T ids) {
-        return GetUsersByIdsURLOptions(std::span<int const>(ids));
-    }
 
     /// @brief creates the necessary url options to get a users details
     /// @param userName the name to get the details for
