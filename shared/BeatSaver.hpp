@@ -77,6 +77,7 @@ namespace BeatSaver::API {
                 } else {
                     // we did not find "id" in doc root, so this is multiple maps
                     for (auto itr = doc.MemberBegin(); itr != memberEnd; itr++) {
+                        if (itr->value.IsNull()) continue;
                         output[itr->name.Get<std::string>()] = itr->value.Get<Models::Beatmap>();
                     }
                 }
