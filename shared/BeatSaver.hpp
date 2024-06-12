@@ -68,8 +68,17 @@ namespace BeatSaver::API {
                 auto memberEnd = doc.MemberEnd();
                 BEATSAVER_PLUSPLUS_ERROR_CHECK(doc);
                 std::unordered_map<std::string, Models::Beatmap> output;
-                for (auto itr = doc.MemberBegin(); itr != memberEnd; itr++) {
-                    output[itr->name.Get<std::string>()] = itr->value.Get<Models::Beatmap>();
+
+                // try to find id member in the doc root, if found this is a singular map response
+                auto idItr = doc.FindMember("id");
+                if (idItr != doc.MemberEnd()) {
+                    auto map = doc.Get<Models::Beatmap>();
+                    output[map.Versions.front().Hash] = std::move(map);
+                } else {
+                    // we did not find "id" in doc root, so this is multiple maps
+                    for (auto itr = doc.MemberBegin(); itr != memberEnd; itr++) {
+                        output[itr->name.Get<std::string>()] = itr->value.Get<Models::Beatmap>();
+                    }
                 }
 
                 responseData = std::move(output);
