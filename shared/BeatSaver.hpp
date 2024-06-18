@@ -180,10 +180,11 @@ namespace BeatSaver::API {
 
     using timestamp = std::variant<std::string, std::chrono::time_point<std::chrono::system_clock>>;
 
-    /// @brief future for an optional T
     /// @brief function called with an optional T as single arg
     template<typename T>
     using finished_opt_function = std::function<void(std::optional<T>)>;
+
+    using progress_function = std::function<void(float)>;
 
     template<auto T>
     struct BeatSaverResponse;
@@ -242,6 +243,40 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetBeatmapByKeyURLOptions, BeatmapResponse);
 
+    /// @brief get beatmap by key sync
+    /// @param key beatmap key
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return BeatmapResponse
+    inline auto GetBeatmapByKey(std::string key, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetBeatmapByKeyURLOptions>>(
+            GetBeatmapByKeyURLOptions(key),
+            progressReport
+        );
+    }
+
+    /// @brief get beatmap by key async
+    /// @param key beatmap key
+    /// @param onFinished method called when request is done void(std::optional<BeatmapResponse>)
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetBeatmapByKeyAsync(std::string key, finished_opt_function<BeatSaverResponse_t<&GetBeatmapByKeyURLOptions>> onFinished, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetBeatmapByKeyURLOptions>>(
+            GetBeatmapByKeyURLOptions(key),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get beatmap by key async
+    /// @param key beatmap key
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<BeatmapResponse>
+    inline auto GetBeatmapByKeyAsync(std::string key, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetBeatmapByKeyURLOptions>>(
+            GetBeatmapByKeyURLOptions(key),
+            progressReport
+        );
+    }
+
     /// @brief creates the necessary url options to download multiple beatmaps infos with the provided keys
     /// @param keys span of keys to get the beatmap infos for
     /// @return urloptions to use with webutils, expects a return of map<std::string (key), BeatSaver::API::BeatmapResponse>
@@ -255,6 +290,40 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetBeatmapsByKeysURLOptions, BeatmapMapResponse);
 
+    /// @brief get multiple beatmaps by keys sync
+    /// @param keys the beatmap keys to get info for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return BeatmapMapResponse
+    inline auto GetBeatmapsByKeys(std::span<std::string const> keys, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetBeatmapsByKeysURLOptions>>(
+            GetBeatmapsByKeysURLOptions(keys),
+            progressReport
+        );
+    }
+
+    /// @brief get multiple beatmaps by keys async
+    /// @param keys the beatmap keys to get info for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @param onFinished method called when request is done void(std::optional<BeatmapMapResponse>)
+    inline auto GetBeatmapsByKeysAsync(std::span<std::string const> keys, finished_opt_function<BeatSaverResponse_t<&GetBeatmapsByKeysURLOptions>> onFinished, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetBeatmapsByKeysURLOptions>>(
+            GetBeatmapsByKeysURLOptions(keys),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get multiple beatmaps by keys async
+    /// @param keys the beatmap keys to get info for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<BeatmapMapResponse>
+    inline auto GetBeatmapsByKeysAsync(std::span<std::string const> keys, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetBeatmapsByKeysURLOptions>>(
+            GetBeatmapsByKeysURLOptions(keys),
+            progressReport
+        );
+    }
+
     /// @brief creates the necessary url options to download a beatmap info with the provided hash
     /// @param hash the hash to get the info for
     /// @return urloptions to use with webutils, expects a return of BeatSaver::API::BeatmapResponse
@@ -265,6 +334,40 @@ namespace BeatSaver::API {
     }
 
     DECLARE_BEATSAVER_RESPONSE_T(GetBeatmapByHashURLOptions, BeatmapResponse);
+
+    /// @brief get beatmap by hash sync
+    /// @param hash beatmap hash
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return BeatmapResponse
+    inline auto GetBeatmapByHash(std::string hash, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetBeatmapByHashURLOptions>>(
+            GetBeatmapByHashURLOptions(hash),
+            progressReport
+        );
+    }
+
+    /// @brief get beatmap by hash async
+    /// @param hash beatmap hash
+    /// @param onFinished method called when request is done void(std::optional<BeatmapResponse>)
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetBeatmapByHashAsync(std::string hash, finished_opt_function<BeatSaverResponse_t<&GetBeatmapByHashURLOptions>> onFinished, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetBeatmapByHashURLOptions>>(
+            GetBeatmapByHashURLOptions(hash),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get beatmap by hash async
+    /// @param hash beatmap hash
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<BeatmapResponse>
+    inline auto GetBeatmapByHashAsync(std::string hash, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetBeatmapByHashURLOptions>>(
+            GetBeatmapByHashURLOptions(hash),
+            progressReport
+        );
+    }
 
     /// @brief creates the necessary url options to download multiple beatmaps infos with the provided hashes
     /// @param hashes span of hashes to get the beatmap infos for
@@ -279,6 +382,40 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetBeatmapsByHashesURLOptions, BeatmapMapResponse);
 
+    /// @brief get multiple beatmaps by hashes sync
+    /// @param hashes the beatmap hashes to get info for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return BeatmapMapResponse
+    inline auto GetBeatmapsByHashes(std::span<std::string const> hashes, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetBeatmapsByHashesURLOptions>>(
+            GetBeatmapsByHashesURLOptions(hashes),
+            progressReport
+        );
+    }
+
+    /// @brief get multiple beatmaps by hashes async
+    /// @param hashes the beatmap hashes to get info for
+    /// @param onFinished method called when request is done void(std::optional<BeatmapMapResponse>)
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetBeatmapsByHashesAsync(std::span<std::string const> hashes, finished_opt_function<BeatSaverResponse_t<&GetBeatmapsByHashesURLOptions>> onFinished, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetBeatmapsByHashesURLOptions>>(
+            GetBeatmapsByHashesURLOptions(hashes),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get multiple beatmaps by hashes async
+    /// @param hashes the beatmap hashes to get info for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<BeatmapMapResponse>
+    inline auto GetBeatmapsByHashesAsync(std::span<std::string const> hashes, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetBeatmapsByHashesURLOptions>>(
+            GetBeatmapsByHashesURLOptions(hashes),
+            progressReport
+        );
+    }
+
     /// @brief creates the necessary url options to get a page of maps by the given uploader
     /// @param id the user id to get a page for
     /// @param page the page to get levels for
@@ -290,6 +427,43 @@ namespace BeatSaver::API {
     }
 
     DECLARE_BEATSAVER_RESPONSE_T(GetBeatmapsByUserURLOptions, SearchPageResponse);
+
+    /// @brief get beatmaps by user sync
+    /// @param id user id
+    /// @param page page of info to get
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return SearchPageResponse
+    inline auto GetBeatmapsByUser(int id, int page = 0, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetBeatmapsByUserURLOptions>>(
+            GetBeatmapsByUserURLOptions(id, page),
+            progressReport
+        );
+    }
+
+    /// @brief get beatmaps by user async
+    /// @param id user id
+    /// @param onFinished method called when request is done void(std::optional<SearchPageResponse>)
+    /// @param page page of info to get
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetBeatmapsByUserAsync(int id, finished_opt_function<BeatSaverResponse_t<&GetBeatmapsByUserURLOptions>> onFinished, int page = 0, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetBeatmapsByUserURLOptions>>(
+            GetBeatmapsByUserURLOptions(id, page),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get beatmaps by user async
+    /// @param id user id
+    /// @param page page of info to get
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<SearchPageResponse>
+    inline auto GetBeatmapsByUserAsync(int id, int page = 0, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetBeatmapsByUserURLOptions>>(
+            GetBeatmapsByUserURLOptions(id, page),
+            progressReport
+        );
+    }
 
     /// @brief creates the necessary url options to get a page of collaborations by the given uploader
     /// @param id the user id to get a page for
@@ -304,6 +478,43 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetCollaborationsByUserURLOptions, SearchPageResponse);
 
+    /// @brief get collaborations by user sync
+    /// @param id user id
+    /// @param queryOptions options to pass along
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return SearchPageResponse
+    inline auto GetCollaborationsByUser(int id, CollaborationQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetCollaborationsByUserURLOptions>>(
+            GetCollaborationsByUserURLOptions(id, queryOptions),
+            progressReport
+        );
+    }
+
+    /// @brief get collaborations by user async
+    /// @param id user id
+    /// @param onFinished method called when request is done void(std::optional<SearchPageResponse>)
+    /// @param queryOptions options to pass along
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetCollaborationsByUserAsync(int id, finished_opt_function<BeatSaverResponse_t<&GetCollaborationsByUserURLOptions>> onFinished, CollaborationQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetCollaborationsByUserURLOptions>>(
+            GetCollaborationsByUserURLOptions(id, queryOptions),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get collaborations by user async
+    /// @param id user id
+    /// @param queryOptions options to pass along
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<SearchPageResponse>
+    inline auto GetCollaborationsByUserAsync(int id, CollaborationQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetCollaborationsByUserURLOptions>>(
+            GetCollaborationsByUserURLOptions(id, queryOptions),
+            progressReport
+        );
+    }
+
     /// @brief creates the necessary url options to get a page of the latest maps on beatsaver
     /// @param id the user id to get a page for
     /// @param queryOptions misc query options
@@ -317,6 +528,40 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetLatestURLOptions, SearchPageResponse);
 
+    /// @brief get latest beatmaps sync
+    /// @param queryOptions misc query options
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return SearchPageResponse
+    inline auto GetLatest(LatestQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetLatestURLOptions>>(
+            GetLatestURLOptions(queryOptions),
+            progressReport
+        );
+    }
+
+    /// @brief get latest beatmaps async
+    /// @param onFinished method called when request is done void(std::optional<SearchPageResponse>)
+    /// @param queryOptions misc query options
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetLatestAsync(finished_opt_function<BeatSaverResponse_t<&GetLatestURLOptions>> onFinished, LatestQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetLatestURLOptions>>(
+            GetLatestURLOptions(queryOptions),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get latest beatmaps async
+    /// @param queryOptions misc query options
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<SearchPageResponse>
+    inline auto GetLatestAsync(LatestQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetLatestURLOptions>>(
+            GetLatestURLOptions(queryOptions),
+            progressReport
+        );
+    }
+
     /// @brief creates the necessary url options to get a page of maps on beatsaver ordered by plays
     /// @param page the page to get
     /// @return urloptions to use with webutils, expects a return of BeatSaver::API::SearchPageResponse
@@ -327,6 +572,40 @@ namespace BeatSaver::API {
     }
 
     DECLARE_BEATSAVER_RESPONSE_T(GetPlaysURLOptions, SearchPageResponse);
+
+    /// @brief get beatmaps by plays sync
+    /// @param page the page to get the info for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return SearchPageResponse
+    inline auto GetPlays(int page = 0, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetPlaysURLOptions>>(
+            GetPlaysURLOptions(page),
+            progressReport
+        );
+    }
+
+    /// @brief get beatmaps by plays async
+    /// @param onFinished method called when request is done void(std::optional<SearchPageResponse>)
+    /// @param page the page to get the info for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetPlaysAsync(finished_opt_function<BeatSaverResponse_t<&GetPlaysURLOptions>> onFinished, int page = 0, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetPlaysURLOptions>>(
+            GetPlaysURLOptions(page),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get beatmaps by plays async
+    /// @param page the page to get the info for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<SearchPageResponse>
+    inline auto GetPlaysAsync(int page = 0, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetPlaysURLOptions>>(
+            GetPlaysURLOptions(page),
+            progressReport
+        );
+    }
 
 #pragma endregion // maps
 
@@ -342,6 +621,40 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetUserByIdURLOptions, UserDetailResponse);
 
+    /// @brief get user by id sync
+    /// @param id the user id to get info for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return UserDetailResponse
+    inline auto GetUserById(int id, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetUserByIdURLOptions>>(
+            GetUserByIdURLOptions(id),
+            progressReport
+        );
+    }
+
+    /// @brief get user by id async
+    /// @param id the user id to get info for
+    /// @param onFinished method called when request is done void(std::optional<UserDetailResponse>)
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetUserByIdAsync(int id, finished_opt_function<BeatSaverResponse_t<&GetUserByIdURLOptions>> onFinished, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetUserByIdURLOptions>>(
+            GetUserByIdURLOptions(id),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get user by id async
+    /// @param id the user id to get info for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<UserDetailResponse>
+    inline auto GetUserByIdAsync(int id, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetUserByIdURLOptions>>(
+            GetUserByIdURLOptions(id),
+            progressReport
+        );
+    }
+
     /// @brief creates the necessary url options to get multiple users details in one request
     /// @param ids the user ids to get the details for
     /// @return urloptions to use with webutils, expects a return of array<BeatSaver::API::UserDetailResponse>
@@ -354,6 +667,40 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetUsersByIdsURLOptions, UserDetailArrayResponse);
 
+    /// @brief get users by ids sync
+    /// @param ids the user ids to get info for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return UserDetailArrayResponse
+    inline auto GetUsersByIds(std::span<int const> ids, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetUsersByIdsURLOptions>>(
+            GetUsersByIdsURLOptions(ids),
+            progressReport
+        );
+    }
+
+    /// @brief get users by ids async
+    /// @param ids the user ids to get info for
+    /// @param onFinished method called when request is done void(std::optional<UserDetailArrayResponse>)
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetUsersByIdsAsync(std::span<int const> ids, finished_opt_function<BeatSaverResponse_t<&GetUsersByIdsURLOptions>> onFinished, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetUsersByIdsURLOptions>>(
+            GetUsersByIdsURLOptions(ids),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get users by ids async
+    /// @param ids the user ids to get info for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<UserDetailArrayResponse>
+    inline auto GetUsersByIdsAsync(std::span<int const> ids, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetUsersByIdsURLOptions>>(
+            GetUsersByIdsURLOptions(ids),
+            progressReport
+        );
+    }
+
     /// @brief creates the necessary url options to get a users details
     /// @param userName the name to get the details for
     /// @return urloptions to use with webutils, expects a return of BeatSaver::API::UserDetailResponse
@@ -365,6 +712,40 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetUserByNameURLOptions, UserDetailResponse);
 
+    /// @brief get user by username sync
+    /// @param userName the username to get the user for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return UserDetailResponse
+    inline auto GetUserByName(std::string userName, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetUserByNameURLOptions>>(
+            GetUserByNameURLOptions(userName),
+            progressReport
+        );
+    }
+
+    /// @brief get user by username async
+    /// @param userName the username to get the user for
+    /// @param onFinished method called when request is done void(std::optional<UserDetailResponse>)
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetUserByNameAsync(std::string userName, finished_opt_function<BeatSaverResponse_t<&GetUserByNameURLOptions>> onFinished, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetUserByNameURLOptions>>(
+            GetUserByNameURLOptions(userName),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get user by username async
+    /// @param userName the username to get the user for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<UserDetailResponse>
+    inline auto GetUserByNameAsync(std::string userName, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetUserByNameURLOptions>>(
+            GetUserByNameURLOptions(userName),
+            progressReport
+        );
+    }
+
     /// @brief creates the necessary url options to download avatar image data
     /// @param version the beatmap version to create the url options for
     /// @return urloptions to use with webutils, expects a return of WebUtils::DataResponse, though if bsml is used WebUtils::SpriteResponse or WebUtils::TextureResponse may also be used
@@ -375,6 +756,40 @@ namespace BeatSaver::API {
     }
 
     DECLARE_BEATSAVER_RESPONSE_T(GetAvatarImageURLOptions, WebUtils::DataResponse);
+
+    /// @brief get avatar image sync
+    /// @param userDetail the user to get the avatar image for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return DataResponse
+    inline auto GetAvatarImage(Models::UserDetail const& userDetail, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetAvatarImageURLOptions>>(
+            GetAvatarImageURLOptions(userDetail),
+            progressReport
+        );
+    }
+
+    /// @brief get avatar image async
+    /// @param userDetail the user to get the avatar image for
+    /// @param onFinished method called when request is done void(std::optional<DataResponse>)
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetAvatarImageAsync(Models::UserDetail const& userDetail, finished_opt_function<BeatSaverResponse_t<&GetAvatarImageURLOptions>> onFinished, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetAvatarImageURLOptions>>(
+            GetAvatarImageURLOptions(userDetail),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get avatar image async
+    /// @param userDetail the user to get the avatar image for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<DataResponse>
+    inline auto GetAvatarImageAsync(Models::UserDetail const& userDetail, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetAvatarImageURLOptions>>(
+            GetAvatarImageURLOptions(userDetail),
+            progressReport
+        );
+    }
 
     /// @brief enum to determine the platform to use for the request
     enum class UserPlatform {
@@ -412,6 +827,53 @@ namespace BeatSaver::API {
     }
 
     DECLARE_BEATSAVER_RESPONSE_T(PostVerifyURLOptionsAndData, VerifyResponse);
+
+    /// @brief post verification request sync
+    /// @param auth user authorization
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return VerifyResponse
+    inline auto PostVerify(PlatformAuth auth, progress_function progressReport = nullptr) {
+        auto [url, data] = PostVerifyURLOptionsAndData(auth);
+        return GetBeatsaverDownloader().Post<BeatSaverResponse_t<&PostVerifyURLOptionsAndData>>(
+            url,
+            {(uint8_t*)data.data(), data.size()},
+            progressReport
+        );
+    }
+
+    /// @brief post verification request async
+    /// @param auth user authorization
+    /// @param onFinished method called when request is done void(std::optional<VerifyResponse>)
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto PostVerifyAsync(PlatformAuth auth, finished_opt_function<BeatSaverResponse_t<&PostVerifyURLOptionsAndData>> onFinished, progress_function progressReport = nullptr) {
+        auto [url, data] = PostVerifyURLOptionsAndData(auth);
+        // post requests are a bit special because we need to be able to keep variables in scope
+        std::thread([](auto url, auto data, auto onFinished, auto progressReport) -> auto {
+            onFinished(
+                GetBeatsaverDownloader().Post<BeatSaverResponse_t<&PostVerifyURLOptionsAndData>>(
+                    url,
+                    {(uint8_t*)data.data(), data.size()},
+                    progressReport
+                )
+            );
+        }, url, data, onFinished, progressReport).detach();
+    }
+
+    /// @brief post verification request async
+    /// @param auth user authorization
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<VerifyResponse>
+    inline auto PostVerifyAsync(PlatformAuth auth, progress_function progressReport = nullptr) {
+        auto [url, data] = PostVerifyURLOptionsAndData(auth);
+        // post requests are a bit special because we need to be able to keep variables in scope
+        return std::async([](auto url, auto data, auto progressReport) -> auto {
+            return GetBeatsaverDownloader().Post<BeatSaverResponse_t<&PostVerifyURLOptionsAndData>>(
+                url,
+                {(uint8_t*)data.data(), data.size()},
+                progressReport
+            );
+        }, url, data, progressReport);
+    }
 #pragma endregion // users
 
 #pragma region search
@@ -486,6 +948,43 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetPageURLOptions, SearchPageResponse);
 
+    /// @brief get search page sync
+    /// @param page page number to get
+    /// @param queryOptions misc query options
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return SearchPageResponse
+    inline auto GetPage(int page, SearchQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetPageURLOptions>>(
+            GetPageURLOptions(page, queryOptions),
+            progressReport
+        );
+    }
+
+    /// @brief get search page async
+    /// @param page page number to get
+    /// @param onFinished method called when request is done void(std::optional<SearchPageResponse>)
+    /// @param queryOptions misc query options
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetPageAsync(int page, finished_opt_function<BeatSaverResponse_t<&GetPageURLOptions>> onFinished, SearchQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetPageURLOptions>>(
+            GetPageURLOptions(page, queryOptions),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get search page async
+    /// @param page page number to get
+    /// @param queryOptions misc query options
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<SearchPageResponse>
+    inline auto GetPageAsync(int page, SearchQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetPageURLOptions>>(
+            GetPageURLOptions(page, queryOptions),
+            progressReport
+        );
+    }
+
     /// @brief provides a readonly span of some map feel tags that are available on beatsaver. these tags were pulled at a moment in time and are not guaranteed to still exist
     BEATSAVER_PLUSPLUS_EXPORT std::span<const std::string> GetMapFeelTags();
 
@@ -514,6 +1013,40 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetVoteURLOptions, ListOfVoteSummaryResponse);
 
+    /// @brief get vote info sync
+    /// @param queryOptions misc query options
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return ListOfVoteSummaryResponse
+    inline auto GetVote(VoteQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetVoteURLOptions>>(
+            GetVoteURLOptions(queryOptions),
+            progressReport
+        );
+    }
+
+    /// @brief get vote info async
+    /// @param onFinished method called when request is done void(std::optional<ListOfVoteSummaryResponse>)
+    /// @param queryOptions misc query options
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetVoteAsync(finished_opt_function<BeatSaverResponse_t<&GetVoteURLOptions>> onFinished, VoteQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetVoteURLOptions>>(
+            GetVoteURLOptions(queryOptions),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get vote info async
+    /// @param queryOptions misc query options
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<ListOfVoteSummaryResponse>
+    inline auto GetVoteAsync(VoteQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetVoteURLOptions>>(
+            GetVoteURLOptions(queryOptions),
+            progressReport
+        );
+    }
+
     /// @brief creates the body data for a vote submission
     std::string BEATSAVER_PLUSPLUS_EXPORT CreateVoteData(PlatformAuth auth, bool direction, std::string hash);
 
@@ -534,6 +1067,60 @@ namespace BeatSaver::API {
     }
 
     DECLARE_BEATSAVER_RESPONSE_T(PostVoteURLOptionsAndData, VoteResponse);
+
+    /// @brief post a vote sync
+    /// @param auth the auth for the request
+    /// @param direction whether this is an up or down vote
+    /// @param hash the hash of the map to vote for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return VoteResponse
+    inline auto PostVote(PlatformAuth auth, bool direction, std::string hash, progress_function progressReport = nullptr) {
+        auto [url, data] = PostVoteURLOptionsAndData(auth, direction, hash);
+        return GetBeatsaverDownloader().Post<BeatSaverResponse_t<&PostVoteURLOptionsAndData>>(
+            url,
+            {(uint8_t*)data.data(), data.size()},
+            progressReport
+        );
+    }
+
+    /// @brief post a vote async
+    /// @param auth the auth for the request
+    /// @param direction whether this is an up or down vote
+    /// @param hash the hash of the map to vote for
+    /// @param onFinished method called when request is done void(std::optional<VoteResponse>)
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto PostVoteAsync(PlatformAuth auth, bool direction, std::string hash, finished_opt_function<BeatSaverResponse_t<&PostVoteURLOptionsAndData>> onFinished, progress_function progressReport = nullptr) {
+        auto [url, data] = PostVoteURLOptionsAndData(auth, direction, hash);
+        // post requests are a bit special because we need to be able to keep variables in scope
+        std::thread([](auto url, auto data, auto onFinished, auto progressReport) -> auto {
+            onFinished(
+                GetBeatsaverDownloader().Post<BeatSaverResponse_t<&PostVoteURLOptionsAndData>>(
+                    url,
+                    {(uint8_t*)data.data(), data.size()},
+                    progressReport
+                )
+            );
+        }, url, data, onFinished, progressReport).detach();
+    }
+
+    /// @brief post a vote async
+    /// @param auth the auth for the request
+    /// @param direction whether this is an up or down vote
+    /// @param hash the hash of the map to vote for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<VoteResponse>
+    inline auto PostVoteAsync(PlatformAuth auth, bool direction, std::string hash, progress_function progressReport = nullptr) {
+        auto [url, data] = PostVoteURLOptionsAndData(auth, direction, hash);
+        // post requests are a bit special because we need to be able to keep variables in scope
+        return std::async([](auto url, auto data, auto progressReport) -> auto {
+            return GetBeatsaverDownloader().Post<BeatSaverResponse_t<&PostVoteURLOptionsAndData>>(
+                url,
+                {(uint8_t*)data.data(), data.size()},
+                progressReport
+            );
+        }, url, data, progressReport);
+    }
+
 #pragma endregion // vote
 
 #pragma region playlists
@@ -569,6 +1156,40 @@ namespace BeatSaver::API {
     }
 
     DECLARE_BEATSAVER_RESPONSE_T(GetLatestPlaylistsURLOptions, PlaylistSearchPageResponse);
+
+    /// @brief get latest playlists sync
+    /// @param queryOptions misc query options
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return PlaylistSearchPageResponse
+    inline auto GetLatestPlaylists(LatestPlaylistsQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetLatestPlaylistsURLOptions>>(
+            GetLatestPlaylistsURLOptions(queryOptions),
+            progressReport
+        );
+    }
+
+    /// @brief get latest playlists async
+    /// @param onFinished method called when request is done void(std::optional<PlaylistSearchPageResponse>)
+    /// @param queryOptions misc query options
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetLatestPlaylistsAsync(finished_opt_function<BeatSaverResponse_t<&GetLatestPlaylistsURLOptions>> onFinished, LatestPlaylistsQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetLatestPlaylistsURLOptions>>(
+            GetLatestPlaylistsURLOptions(queryOptions),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get latest playlists async
+    /// @param queryOptions misc query options
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<PlaylistSearchPageResponse>
+    inline auto GetLatestPlaylistsAsync(LatestPlaylistsQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetLatestPlaylistsURLOptions>>(
+            GetLatestPlaylistsURLOptions(queryOptions),
+            progressReport
+        );
+    }
 
     enum class SearchPlaylistSortOrder {
         Latest,
@@ -614,6 +1235,43 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetSearchPlaylistsURLOptions, PlaylistSearchPageResponse);
 
+    /// @brief search playlists sync
+    /// @param page page of search results to get
+    /// @param queryOptions misc query options
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return PlaylistSearchPageResponse
+    inline auto GetSearchPlaylists(int page = 0, SearchPlaylistsQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetSearchPlaylistsURLOptions>>(
+            GetSearchPlaylistsURLOptions(page, queryOptions),
+            progressReport
+        );
+    }
+
+    /// @brief search playlists async
+    /// @param onFinished method called when request is done void(std::optional<PlaylistSearchPageResponse>)
+    /// @param page page of search results to get
+    /// @param queryOptions misc query options
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetSearchPlaylistsAsync(finished_opt_function<BeatSaverResponse_t<&GetSearchPlaylistsURLOptions>> onFinished, int page = 0, SearchPlaylistsQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetSearchPlaylistsURLOptions>>(
+            GetSearchPlaylistsURLOptions(page, queryOptions),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief search playlists async
+    /// @param page page of search results to get
+    /// @param queryOptions misc query options
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<PlaylistSearchPageResponse>
+    inline auto GetSearchPlaylistsAsync(int page = 0, SearchPlaylistsQueryOptions queryOptions = {}, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetSearchPlaylistsURLOptions>>(
+            GetSearchPlaylistsURLOptions(page, queryOptions),
+            progressReport
+        );
+    }
+
     /// @brief creates the necessary url options to get the playlists for a certain user
     /// @param userID the user to get playlists for
     /// @param page the page to get
@@ -626,6 +1284,43 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetUserPlaylistsURLOptions, PlaylistSearchPageResponse);
 
+    /// @brief get playlists for user sync
+    /// @param userID the user to get playlists for
+    /// @param page page of search results to get
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return PlaylistSearchPageResponse
+    inline auto GetUserPlaylists(int userID, int page = 0, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetUserPlaylistsURLOptions>>(
+            GetUserPlaylistsURLOptions(userID, page),
+            progressReport
+        );
+    }
+
+    /// @brief get playlists for user async
+    /// @param userID the user to get playlists for
+    /// @param onFinished method called when request is done void(std::optional<PlaylistSearchPageResponse>)
+    /// @param page page of search results to get
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetUserPlaylistsAsync(int userID, finished_opt_function<BeatSaverResponse_t<&GetUserPlaylistsURLOptions>> onFinished, int page = 0, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetUserPlaylistsURLOptions>>(
+            GetUserPlaylistsURLOptions(userID, page),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get playlists for user async
+    /// @param userID the user to get playlists for
+    /// @param page page of search results to get
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<PlaylistSearchPageResponse>
+    inline auto GetUserPlaylistsAsync(int userID, int page = 0, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetUserPlaylistsURLOptions>>(
+            GetUserPlaylistsURLOptions(userID, page),
+            progressReport
+        );
+    }
+
     /// @brief creates the necessary url options to get the info for a specific playlist
     /// @param playlistID the id of the playlist
     /// @param page the page of beatmaps to get from the playlist info
@@ -637,6 +1332,44 @@ namespace BeatSaver::API {
     }
 
     DECLARE_BEATSAVER_RESPONSE_T(GetPlaylistURLOptions, PlaylistPageResponse);
+
+    /// @brief get playlist info sync
+    /// @param playlistID the playlist to get info for
+    /// @param page page of search results to get
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return PlaylistSearchPageResponse
+    inline auto GetPlaylist(int playlistID, int page = 0, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetPlaylistURLOptions>>(
+            GetPlaylistURLOptions(playlistID, page),
+            progressReport
+        );
+    }
+
+    /// @brief get playlist info async
+    /// @param playlistID the playlist to get info for
+    /// @param onFinished method called when request is done void(std::optional<PlaylistSearchPageResponse>)
+    /// @param page page of search results to get
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetPlaylistAsync(int playlistID, finished_opt_function<BeatSaverResponse_t<&GetPlaylistURLOptions>> onFinished, int page = 0, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetPlaylistURLOptions>>(
+            GetPlaylistURLOptions(playlistID, page),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get playlist info async
+    /// @param playlistID the playlist to get info for
+    /// @param page page of search results to get
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<PlaylistSearchPageResponse>
+    inline auto GetPlaylistAsync(int playlistID, int page = 0, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetPlaylistURLOptions>>(
+            GetPlaylistURLOptions(playlistID, page),
+            progressReport
+        );
+    }
+
 #pragma endregion // playlists
 
 #pragma region download
@@ -732,6 +1465,40 @@ namespace BeatSaver::API {
 
     DECLARE_BEATSAVER_RESPONSE_T(GetCoverImageURLOptions, WebUtils::DataResponse);
 
+    /// @brief get cover image sync
+    /// @param version the beatmap version to get the cover image for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return DataResponse
+    inline auto GetCoverImage(Models::BeatmapVersion const& version, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetCoverImageURLOptions>>(
+            GetCoverImageURLOptions(version),
+            progressReport
+        );
+    }
+
+    /// @brief get cover image async
+    /// @param version the beatmap version to get the cover image for
+    /// @param onFinished method called when request is done void(std::optional<DataResponse>)
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetCoverImageAsync(Models::BeatmapVersion const& version, finished_opt_function<BeatSaverResponse_t<&GetCoverImageURLOptions>> onFinished, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetCoverImageURLOptions>>(
+            GetCoverImageURLOptions(version),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get cover image async
+    /// @param version the beatmap version to get the cover image for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<DataResponse>
+    inline auto GetCoverImageAsync(Models::BeatmapVersion const& version, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetCoverImageURLOptions>>(
+            GetCoverImageURLOptions(version),
+            progressReport
+        );
+    }
+
     /// @brief creates the necessary url options to download preview data
     /// @param version the beatmap version to create the url options for
     /// @return urloptions to use with webutils, expects a return of WebUtils::DataResponse
@@ -742,6 +1509,40 @@ namespace BeatSaver::API {
     }
 
     DECLARE_BEATSAVER_RESPONSE_T(GetPreviewURLOptions, WebUtils::DataResponse);
+
+    /// @brief get preview data sync
+    /// @param version the beatmap version get the preview for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return DataResponse
+    inline auto GetPreview(Models::BeatmapVersion const& version, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().Get<BeatSaverResponse_t<&GetPreviewURLOptions>>(
+            GetPreviewURLOptions(version),
+            progressReport
+        );
+    }
+
+    /// @brief get preview data async
+    /// @param version the beatmap version get the preview for
+    /// @param onFinished method called when request is done void(std::optional<DataResponse>)
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    inline auto GetPreviewAsync(Models::BeatmapVersion const& version, finished_opt_function<BeatSaverResponse_t<&GetPreviewURLOptions>> onFinished, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetPreviewURLOptions>>(
+            GetPreviewURLOptions(version),
+            onFinished,
+            progressReport
+        );
+    }
+
+    /// @brief get preview data async
+    /// @param version the beatmap version get the preview for
+    /// @param progressReport method called to report download progress, void(float) 0-1
+    /// @return std::future<DataResponse>
+    inline auto GetPreviewAsync(Models::BeatmapVersion const& version, progress_function progressReport = nullptr) {
+        return GetBeatsaverDownloader().GetAsync<BeatSaverResponse_t<&GetPreviewURLOptions>>(
+            GetPreviewURLOptions(version),
+            progressReport
+        );
+    }
 
     /// @brief download multiple beatmaps in a ratelimited fashion
     /// @param infos the beatmaps to download
@@ -768,10 +1569,11 @@ namespace BeatSaver::API {
 
                 auto http = targetResponse->HttpCode;
                 auto curl = targetResponse->CurlStatus;
-                if (curl == 0 && (http < 200 || http >= 300)) {
-                    // http codes other than 2xx we want no retries
-                    return std::nullopt;
-                }
+                // don't retry if curl fails
+                if (curl != 0) return std::nullopt;
+
+                // http codes other than 2xx we want no retries
+                if (http < 200 || http >= 300) return std::nullopt;
 
                 return WebUtils::RatelimitedDispatcher::RetryOptions{std::chrono::milliseconds(50)};
             }
