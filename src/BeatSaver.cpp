@@ -296,7 +296,6 @@ namespace BeatSaver::API {
         return tags;
     }
 
-
     bool DownloadBeatmapResponse::AcceptData(std::span<uint8_t const> data) {
         auto basePath = GetDefaultOutputPath();
         auto targetPath = basePath / Utils::ReplaceIllegalCharsInPath(info.FolderName);
@@ -305,5 +304,17 @@ namespace BeatSaver::API {
             return true;
         }
         return false;
+    }
+
+    std::string BeatmapDownloadInfo::SanitizeFolderName(std::string_view str) {
+        static const std::string AllowedChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890()[]{}%&.,;=!-_ ";
+        std::string folderName(str);
+        for (auto& c : folderName) {
+            // if you can't find this char in allowed chars, set it to _
+            if (AllowedChars.find(c) == std::string::npos)
+                c = '_';
+        }
+
+        return folderName;
     }
 }
