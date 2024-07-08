@@ -1375,16 +1375,26 @@ namespace BeatSaver::API {
 #pragma region download
     /// @brief helper struct containing the information for a map download
     struct BEATSAVER_PLUSPLUS_EXPORT BeatmapDownloadInfo {
+        /// @brief sanitizes the folder name for the beatmap download
+        static std::string SanitizeFolderName(std::string_view foldername);
+        /// @brief formats and then sanitizes the folder name for the beatmap download
+        static std::string SanitizeFolderName(std::string_view key, std::string_view songname, std::string_view authorname) {
+            return SanitizeFolderName(fmt::format("{} ({} - {})", key, songname, authorname));
+        }
+
         BeatmapDownloadInfo() = default;
         /// @brief info from direct values
-        BeatmapDownloadInfo(std::string Key, std::string DownloadURL, std::string FolderName) : Key(Key), DownloadURL(DownloadURL), FolderName(FolderName) {}
+        BeatmapDownloadInfo(std::string Key, std::string DownloadURL, std::string FolderName) : Key(Key), DownloadURL(DownloadURL), FolderName(SanitizeFolderName(FolderName)) {}
         /// @brief info from a beatmap, gets the front version to download
         BeatmapDownloadInfo(Models::Beatmap const& beatmap) : BeatmapDownloadInfo(beatmap, beatmap.Versions.front()) {}
         /// @brief info from a beatmap and version
-        BeatmapDownloadInfo(Models::Beatmap const& beatmap, Models::BeatmapVersion const& version) : Key(version.Key.value_or(beatmap.Id)), DownloadURL(version.DownloadURL), FolderName(fmt::format("{} ({} - {})", Key, beatmap.Metadata.SongName, beatmap.Metadata.LevelAuthorName)) {}
+        BeatmapDownloadInfo(Models::Beatmap const& beatmap, Models::BeatmapVersion const& version) : Key(version.Key.value_or(beatmap.Id)), DownloadURL(version.DownloadURL), FolderName(SanitizeFolderName(Key, beatmap.Metadata.SongName, beatmap.Metadata.LevelAuthorName)) {}
 
+        /// @brief beatmap key, /beatmaps/ids/{key}
         std::string const Key;
+        /// @brief download url, where the map zip is at
         std::string const DownloadURL;
+        /// @brief folder name, the name to use for the folder when saving the map to disk
         std::string const FolderName;
     };
 
