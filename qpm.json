@@ -6,7 +6,7 @@
     "name": "BeatSaverPlusPlus",
     "id": "beatsaverplusplus",
     "version": "0.1.0",
-    "url": "https://github.com/RedBrumbler/BeatSaverPlusPlus",
+    "url": "https://github.com/bsq-ports/BeatSaverPlusPlus",
     "additionalData": {
       "overrideSoName": "libbeatsaverplusplus.so",
       "cmake": false
