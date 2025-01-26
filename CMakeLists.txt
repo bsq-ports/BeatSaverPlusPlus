@@ -28,14 +28,14 @@ target_link_libraries(
     log
     z
     ${EXTERN_DIR}/libs/libzip.so
-    ${EXTERN_DIR}/libs/libpaperlog.so
+    ${EXTERN_DIR}/libs/libpaper2_scotland2.so
     ${EXTERN_DIR}/libs/libweb-utils.so
 )
 
 target_include_directories(beatsaverplusplus PRIVATE ${INCLUDE_DIR})
 target_include_directories(beatsaverplusplus PRIVATE ${SHARED_DIR})
 target_include_directories(beatsaverplusplus PRIVATE ${EXTERN_DIR}/includes)
-target_include_directories(beatsaverplusplus SYSTEM PRIVATE ${EXTERN_DIR}/includes/paper/shared/utfcpp/source)
+target_include_directories(beatsaverplusplus SYSTEM PRIVATE ${EXTERN_DIR}/includes/paper2_scotland2/shared/utfcpp/source)
 target_include_directories(beatsaverplusplus SYSTEM PRIVATE ${EXTERN_DIR}/includes/fmt/fmt/include/)
 target_include_directories(beatsaverplusplus SYSTEM PRIVATE ${EXTERN_DIR}/includes/beatsaber-hook/shared/rapidjson/include/)
 target_include_directories(beatsaverplusplus SYSTEM PRIVATE ${EXTERN_DIR}/includes/libil2cpp/il2cpp/libil2cpp)

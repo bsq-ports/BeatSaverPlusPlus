@@ -1,6 +1,6 @@
 #pragma once
 
-#include "paper/shared/logger.hpp"
+#include "paper2_scotland2/shared/logger.hpp"
 #include <string_view>
 
 #define INFO(str, ...) Paper::Logger::fmtLogTag<Paper::LogLevel::INF>(str, "BeatSaverPlusPlus" __VA_OPT__(, __VA_ARGS__))
