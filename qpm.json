@@ -15,11 +15,12 @@
   "workspace": {
     "scripts": {
       "qmod": [
-        "pwsh ./scripts/build.ps1",
+        "pwsh ./scripts/build.ps1 -release",
         "qpm qmod manifest",
         "pwsh ./scripts/createqmod.ps1 BeatSaverPlusPlus"
       ]
     },
+    "ndk": "^27.3.13750724",
     "qmodIncludeDirs": [],
     "qmodIncludeFiles": [],
     "qmodOutput": null
