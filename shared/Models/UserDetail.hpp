@@ -12,6 +12,6 @@ SERDE_STRUCT(BeatSaver::Models, UserDetail,
     BEATSAVER_PLUSPLUS_GETTER_FIELD_OPTIONAL(UserStats, Stats, "stats");
 
     public:
-        void GetAvatarImageAsync(std::function<void(std::optional<std::vector<uint8_t>>)>) const;
-        std::optional<std::vector<uint8_t>> GetAvatarImage() const;
+        BEATSAVER_PLUSPLUS_EXPORT void GetAvatarImageAsync(std::function<void(std::optional<std::vector<uint8_t>>)>) const;
+        BEATSAVER_PLUSPLUS_EXPORT std::optional<std::vector<uint8_t>> GetAvatarImage() const;
 )

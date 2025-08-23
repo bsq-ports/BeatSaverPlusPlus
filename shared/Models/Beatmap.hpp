@@ -20,42 +20,42 @@ SERDE_STRUCT(BeatSaver::Models, Beatmap,
     BEATSAVER_PLUSPLUS_GETTER_FIELD(std::vector<BeatmapVersion>, Versions, "versions");
 
     public:
-        std::string CreateFolderName(const BeatmapVersion& version) const { return fmt::format("{} ({} - {})", version.Key.value_or(Id), Metadata.SongName, Metadata.LevelAuthorName); }
+        BEATSAVER_PLUSPLUS_EXPORT std::string CreateFolderName(const BeatmapVersion& version) const { return fmt::format("{} ({} - {})", version.Key.value_or(Id), Metadata.SongName, Metadata.LevelAuthorName); }
         std::string CreateFolderName() const { return CreateFolderName(Versions.front()); }
 
-        std::optional<std::filesystem::path> DownloadLatestBeatmap(Beatmap const& beatmap, std::function<void(float)> progressReport) const {
+        BEATSAVER_PLUSPLUS_EXPORT std::optional<std::filesystem::path> DownloadLatestBeatmap(Beatmap const& beatmap, std::function<void(float)> progressReport) const {
             return Versions.front().DownloadBeatmap(*this, progressReport);
         }
 
-        std::future<std::optional<std::filesystem::path>> DownloadLatestBeatmapAsync(Beatmap const& beatmap, std::function<void(float)> progressReport) const {
+        BEATSAVER_PLUSPLUS_EXPORT std::future<std::optional<std::filesystem::path>> DownloadLatestBeatmapAsync(Beatmap const& beatmap, std::function<void(float)> progressReport) const {
             return Versions.front().DownloadBeatmapAsync(*this, progressReport);
         }
 
-        void DownloadLatestBeatmapAsync(Beatmap const& beatmap, std::function<void(std::optional<std::filesystem::path>)> onFinished, std::function<void(float)> progressReport) const {
+        BEATSAVER_PLUSPLUS_EXPORT void DownloadLatestBeatmapAsync(Beatmap const& beatmap, std::function<void(std::optional<std::filesystem::path>)> onFinished, std::function<void(float)> progressReport) const {
             return Versions.front().DownloadBeatmapAsync(*this, onFinished, progressReport);
         }
 
-        std::optional<std::vector<uint8_t>> GetLatestCoverImage() const {
+        BEATSAVER_PLUSPLUS_EXPORT std::optional<std::vector<uint8_t>> GetLatestCoverImage() const {
             return Versions.front().GetCoverImage();
         }
 
-        void GetLatestCoverImageAsync(std::function<void(std::optional<std::vector<uint8_t>>)> onFinished) const {
+        BEATSAVER_PLUSPLUS_EXPORT void GetLatestCoverImageAsync(std::function<void(std::optional<std::vector<uint8_t>>)> onFinished) const {
             return Versions.front().GetCoverImageAsync(onFinished);
         }
 
-        std::future<std::optional<std::vector<uint8_t>>> GetLatestCoverImageAsync() const {
+        BEATSAVER_PLUSPLUS_EXPORT std::future<std::optional<std::vector<uint8_t>>> GetLatestCoverImageAsync() const {
             return Versions.front().GetCoverImageAsync();
         }
 
-        std::optional<std::vector<uint8_t>> GetLatestPreview() const {
+        BEATSAVER_PLUSPLUS_EXPORT std::optional<std::vector<uint8_t>> GetLatestPreview() const {
             return Versions.front().GetPreview();
         }
 
-        void GetLatestPreviewAsync(std::function<void(std::optional<std::vector<uint8_t>>)> onFinished) const {
+        BEATSAVER_PLUSPLUS_EXPORT void GetLatestPreviewAsync(std::function<void(std::optional<std::vector<uint8_t>>)> onFinished) const {
             return Versions.front().GetPreviewAsync(onFinished);
         }
 
-        std::future<std::optional<std::vector<uint8_t>>> GetLatestPreviewAsync() const {
+        BEATSAVER_PLUSPLUS_EXPORT std::future<std::optional<std::vector<uint8_t>>> GetLatestPreviewAsync() const {
             return Versions.front().GetPreviewAsync();
         }
 );
