@@ -4,12 +4,14 @@ param (
     [Parameter(Mandatory=$false)]
     [Switch]$log,
     [Parameter(Mandatory=$false)]
-    [Switch]$docs
+    [Switch]$docs,
+    [Parameter(Mandatory=$false)]
+    [Switch]$release
 )
 if ($docs.IsPresent) {
     & $PSScriptRoot/build.ps1 -docs
 } else {
-    & $PSScriptRoot/build.ps1
+    & $PSScriptRoot/build.ps1 -release:$release
 }
 if (-not ($LastExitCode -eq 0)) {
     echo "build failed, not copying"
@@ -17,9 +19,9 @@ if (-not ($LastExitCode -eq 0)) {
 }
 
 if ($debug.IsPresent) {
-    & adb push build/debug/libbeatsaverplusplus.so /sdcard/ModData/com.beatgames.beatsaber/Modloader/mods/libbeatsaverplusplus.so
+    & adb push build/debug/libbeatsaverplusplus.so /sdcard/ModData/com.beatgames.beatsaber/Modloader/libs/libbeatsaverplusplus.so
 } else {
-    & adb push build/libbeatsaverplusplus.so /sdcard/ModData/com.beatgames.beatsaber/Modloader/mods/libbeatsaverplusplus.so
+    & adb push build/libbeatsaverplusplus.so /sdcard/ModData/com.beatgames.beatsaber/Modloader/libs/libbeatsaverplusplus.so
 }
 
 & adb shell am force-stop com.beatgames.beatsaber

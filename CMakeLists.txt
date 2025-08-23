@@ -16,6 +16,17 @@ file(GLOB_RECURSE cpp_files ${SRC_DIR}/*.cpp)
 
 add_link_options(-Wl,--exclude-libs,ALL)
 
+if(${CMAKE_BUILD_TYPE} STREQUAL "RELEASE" OR ${CMAKE_BUILD_TYPE} STREQUAL "RelWithDebInfo" OR ${CMAKE_BUILD_TYPE} STREQUAL "MinSizeRel")
+
+    message(STATUS "Building in ${CMAKE_BUILD_TYPE} mode, enabling optimizations")
+    # Better optimizations
+    add_compile_options(-O3)
+
+    # LTO
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE)
+    add_compile_options(-flto)
+endif()
+
 add_library(
     beatsaverplusplus
     SHARED
