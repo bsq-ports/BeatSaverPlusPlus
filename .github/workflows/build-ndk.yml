@@ -43,8 +43,6 @@ jobs:
         submodules: true
         lfs: true
 
-    - uses: seanmiddleditch/gha-setup-ninja@v5
-
     # get version from pushed tag
     - name: Extract version
       if: startsWith(github.ref, 'refs/tags/v')
